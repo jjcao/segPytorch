@@ -5,8 +5,7 @@ Created on Thu Aug 10 17:07:52 2017
 
 @author: jjcao
 """
-from dataset.voc_dataset import VocDataset
-
+from datasets.voc_dataset import VocDataset
 
 def get_dataset(name):
     """get_loader
@@ -16,3 +15,5 @@ def get_dataset(name):
         'pascal': VocDataset,
         #'camvid': camvidLoader,
     }[name]
+ 
+    
