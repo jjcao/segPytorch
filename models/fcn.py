@@ -22,14 +22,14 @@ class fcn32s(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(64, 64, 3, padding=1),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(2, stride=2, ceil_mode=True),)
+            nn.MaxPool2d(2, stride=2, ceil_mode=True)) # 1/2
 
         self.conv_block2 = nn.Sequential(
             nn.Conv2d(64, 128, 3, padding=1),
             nn.ReLU(inplace=True),
             nn.Conv2d(128, 128, 3, padding=1),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(2, stride=2, ceil_mode=True),)
+            nn.MaxPool2d(2, stride=2, ceil_mode=True)) # 1/4
 
         self.conv_block3 = nn.Sequential(
             nn.Conv2d(128, 256, 3, padding=1),
@@ -38,7 +38,7 @@ class fcn32s(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(256, 256, 3, padding=1),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(2, stride=2, ceil_mode=True),)
+            nn.MaxPool2d(2, stride=2, ceil_mode=True)) # 1/8
 
         self.conv_block4 = nn.Sequential(
             nn.Conv2d(256, 512, 3, padding=1),
@@ -47,7 +47,7 @@ class fcn32s(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(512, 512, 3, padding=1),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(2, stride=2, ceil_mode=True),)
+            nn.MaxPool2d(2, stride=2, ceil_mode=True)) # 1/16
 
         self.conv_block5 = nn.Sequential(
             nn.Conv2d(512, 512, 3, padding=1),
@@ -56,8 +56,9 @@ class fcn32s(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(512, 512, 3, padding=1),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(2, stride=2, ceil_mode=True),)
+            nn.MaxPool2d(2, stride=2, ceil_mode=True)) # 1/32
 
+        # fc6 + fc7 + fc8
         self.classifier = nn.Sequential(
             nn.Conv2d(512, 4096, 7),
             nn.ReLU(inplace=True),
@@ -65,7 +66,7 @@ class fcn32s(nn.Module):
             nn.Conv2d(4096, 4096, 1),
             nn.ReLU(inplace=True),
             nn.Dropout2d(),
-            nn.Conv2d(4096, self.n_classes, 1),)
+            nn.Conv2d(4096, self.n_classes, 1),) # score 
 
         # TODO: Add support for learned upsampling
         if self.learned_billinear:
