@@ -89,7 +89,7 @@ class fcn32s(nn.Module):
         return out
 
 
-    def init_vgg16_params(self, vgg16, copy_fc8=True):
+    def init_vgg16_params(self, vgg16, copy_fc8=False):
         blocks = [self.conv_block1,
                   self.conv_block2,
                   self.conv_block3,

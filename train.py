@@ -7,27 +7,37 @@ Created on Thu Aug 10 15:57:43 2017
 """
 import argparse
 from datasets import get_dataset
-from datasets.util import Rescale, Normalize, ToTensor
+from datasets import transforms
 from models import get_model
 import torch
-from torchvision import transforms
+#from torchvision import transforms
 
 import os
 import os.path as osp
-import shlex
-import subprocess
 import datetime
 import pytz
 import yaml
 
-import visdom
+from trainer import Trainer
 
 here = osp.dirname(osp.abspath(__file__))
 configurations = {
     # same configuration as original work
     # https://github.com/shelhamer/fcn.berkeleyvision.org
     1: dict(
+        max_iteration=2,
+        batch_size = 1,
+        num_workers = 4,
+        lr=1.0e-10, # learning rate
+        momentum=0.99,
+        weight_decay=0.0005,
+        interval_validate=4000,
+    ),
+    
+    2: dict(
         max_iteration=100000,
+        batch_size = 1,
+        num_workers = 4,
         lr=1.0e-10, # learning rate
         momentum=0.99,
         weight_decay=0.0005,
@@ -35,10 +45,10 @@ configurations = {
     )
 }
 
-def git_hash():
-    cmd = 'git log -n 1 --pretty="%h"'
-    hash = subprocess.check_output(shlex.split(cmd)).strip()
-    return hash
+#def git_hash():
+#    cmd = 'git log -n 1 --pretty="%h"'
+#    hash = subprocess.check_output(shlex.split(cmd)).strip()
+#    return hash
 
 def get_log_dir(model_name, config_id, cfg):
     # load config
@@ -79,15 +89,25 @@ def train(args):
     # 
 #    data_transform = transforms.Compose([Rescale(256), RandomCrop(224), 
 #                                   Normalize(), ToTensor() ])
-    data_transform = transforms.Compose([Normalize(), ToTensor() ]) # used by FCN
+    data_transform = transforms.Compose(
+            [transforms.Rescale((args.im_rows, args.im_cols)),
+            transforms.Normalize(Dataset.mean_bgr), 
+            transforms.ToTensor() ]) # used by FCN
 
-    dataset = Dataset(dataset_dir=dataset_dir, split='train', transform=data_transform)    
-    kwargs = {'pin_memory': True} if cuda else {}  
-    train_loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, 
-                                             shuffle=True, num_workers=4, **kwargs)
+    dataset = Dataset(dataset_dir=dataset_dir, split='train', transform=data_transform) 
+    
+    kwargs = {'num_workers': cfg['num_workers'], 'pin_memory': True} if cuda else {}  
+    train_loader = torch.utils.data.DataLoader(dataset, batch_size=cfg['batch_size'], 
+                                               shuffle=True, **kwargs)
     dataset = Dataset(dataset_dir=dataset_dir, split='val', transform=data_transform)
-    val_loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, 
+    val_loader = torch.utils.data.DataLoader(dataset, batch_size=cfg['batch_size'],
                                              shuffle=False, **kwargs)
+    if __debug__:
+        print("batch size is {}, length of train_loader is {}".
+                                      format(cfg['batch_size'], len(train_loader)))
+        im, lbl = dataset[0]
+        print(im.shape, lbl.shape)
+
 #    test_image, test_segmap = dataset[0]
 #    if cuda:     
 #        test_image = Variable(test_image.unsqueeze(0).cuda(0))
@@ -96,6 +116,7 @@ def train(args):
 
 
     # Setup visdom for visualization
+#    import visdom
 #    vis = visdom.Visdom()
 #
 #    loss_window = vis.line(X=torch.zeros((1,)).cpu(),
@@ -104,14 +125,16 @@ def train(args):
 #                                     ylabel='Loss',
 #                                     title='Training Loss',
 #                                     legend=['Loss']))
-    
-    
+ 
+   
     # 2. model
     checkpoint = None
     if args.resume:
         checkpoint = torch.load(args.resume)
         
-    model, start_epoch,  start_iteration= get_model(args.arch, dataset.n_classes, checkpoint)
+    model, start_epoch,  start_iteration= get_model(args.arch, 
+                                                    len(dataset.class_names),
+                                                    checkpoint)
     if cuda:
         model = model.cuda()        
     
@@ -121,17 +144,16 @@ def train(args):
     if args.resume:
         optimizer.load_state_dict(checkpoint['optim_state_dict'])
  
-    
      
     # 4. train        
     trainer = Trainer(
-        cuda=cuda,
         model=model,
         optimizer=optimizer,
         train_loader=train_loader,
-        train_loader=train_loader,
+        val_loader=val_loader,
         out=log_dir,
         max_iter=cfg['max_iteration'],
+        l_rate = cfg['lr'],
         interval_validate=cfg.get('interval_validate', len(train_loader)),
     )
     trainer.epoch = start_epoch
@@ -140,6 +162,8 @@ def train(args):
 
         
 if __name__ == '__main__':
+    torch.set_num_threads(1)
+    
     parser = argparse.ArgumentParser(description='Hyperparams')
     
     parser.add_argument('--dataset', nargs='?', type=str, default='pascal', 
@@ -153,14 +177,10 @@ if __name__ == '__main__':
     
     parser.add_argument('-g', '--gpu', type=str, default='0')
     parser.add_argument('--resume', help='Checkpoint path')
-    
-    parser.add_argument('--batch_size', nargs='?', type=int, default=1, 
-                        help='Batch Size')
-    
-    
-    parser.add_argument('--img_rows', nargs='?', type=int, default=256, 
+            
+    parser.add_argument('--im_rows', nargs='?', type=int, default=256, 
                         help='Height of the input image')
-    parser.add_argument('--img_cols', nargs='?', type=int, default=256, 
+    parser.add_argument('--im_cols', nargs='?', type=int, default=256, 
                         help='Height of the input image')
     
     parser.add_argument('--feature_scale', nargs='?', type=int, default=1, 
