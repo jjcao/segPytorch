@@ -1,4 +1,2 @@
-
-datasets/__pycache__/
-
-res/\.ipynb_checkpoints/
+__pycache__/
+logs/

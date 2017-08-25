@@ -68,7 +68,7 @@ class VocDataset(Dataset):
         self.transform = transform
         self.files = collections.defaultdict(list)
         
-        for split in ['train', 'val', 'trainval', 'val_jjcao']:
+        for split in ['train', 'val', 'trainval', 'train_jjcao', 'val_jjcao']:
             imset_file = osp.join(
                 dataset_dir, 'ImageSets/Segmentation/%s.txt' % split)
             for did in open(imset_file):

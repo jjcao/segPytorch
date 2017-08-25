@@ -25,7 +25,7 @@ configurations = {
     # same configuration as original work
     # https://github.com/shelhamer/fcn.berkeleyvision.org
     1: dict(
-        max_iteration=2,
+        max_iteration=20,
         batch_size = 1,
         num_workers = 4,
         lr=1.0e-10, # learning rate
@@ -94,12 +94,12 @@ def train(args):
             transforms.Normalize(Dataset.mean_bgr), 
             transforms.ToTensor() ]) # used by FCN
 
-    dataset = Dataset(dataset_dir=dataset_dir, split='train', transform=data_transform) 
+    dataset = Dataset(dataset_dir=dataset_dir, split='train_jjcao', transform=data_transform) 
     
-    kwargs = {'num_workers': cfg['num_workers'], 'pin_memory': True} if cuda else {}  
+    kwargs = {'num_workers': cfg['num_workers'], 'pin_memory': True} if cuda else {'num_workers': cfg['num_workers']}  
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=cfg['batch_size'], 
                                                shuffle=True, **kwargs)
-    dataset = Dataset(dataset_dir=dataset_dir, split='val', transform=data_transform)
+    dataset = Dataset(dataset_dir=dataset_dir, split='val_jjcao', transform=data_transform)
     val_loader = torch.utils.data.DataLoader(dataset, batch_size=cfg['batch_size'],
                                              shuffle=False, **kwargs)
     if __debug__:
@@ -162,7 +162,7 @@ def train(args):
 
         
 if __name__ == '__main__':
-    torch.set_num_threads(1)
+    #torch.set_num_threads(1)
     
     parser = argparse.ArgumentParser(description='Hyperparams')
     
