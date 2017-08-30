@@ -40,33 +40,15 @@ def cross_entropy2d(input, target, weight=None, size_average=True):
         loss /= mask.data.sum()
     return loss
 
-def poly_lr_scheduler(optimizer, init_lr, iter, lr_decay_iter=1, max_iter=30000, power=0.9,):
-    """Polynomial decay of learning rate
-        :param init_lr is base learning rate
-        :param iter is a current iteration
-        :param lr_decay_iter how frequently decay occurs, default is 1
-        :param max_iter is number of maximum iterations
-        :param power is a polymomial power
-    """
-    if iter % lr_decay_iter or iter > max_iter:
-        return optimizer
-
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = init_lr*(1 - iter/max_iter)**power
-
-
-def adjust_learning_rate(optimizer, init_lr, epoch):
-    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = init_lr * (0.1 ** (epoch // 30))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-        
 class Trainer(object):
 
-    def __init__(self, model, optimizer,
+    def __init__(self, cuda, model, optimizer,
                  train_loader, val_loader, out, max_iter, l_rate=1.0e-10,
-                 size_average=True, interval_validate=None):
+                 size_average=False, interval_validate=None):
         # max_iter: max number of iterations: in each interation a batch of data are used.
+       
+        self.cuda = cuda
+        
         self.model = model
         self.optim = optimizer
 
@@ -145,8 +127,8 @@ class Trainer(object):
                     [transforms.FromTensor(), 
                      transforms.UnNormalize(self.val_loader.dataset.mean_bgr)])
             for img, lt, lp in zip(imgs, lbl_true, lbl_pred):
-                #img, lt = transform(img, lt)
-                img, lt = self.val_loader.dataset.untransform(img, lt)
+                img, lt = transform(img, lt)
+                #img, lt = self.val_loader.dataset.untransform(img, lt)
                 label_trues.append(lt)
                 label_preds.append(lp)
                 if len(visualizations) < 9:
@@ -198,6 +180,7 @@ class Trainer(object):
         for batch_idx, (data, target) in tqdm.tqdm(
                 enumerate(self.train_loader), total=len(self.train_loader),
                 desc='Train epoch=%d' % self.epoch, ncols=80, leave=False):
+            #import pdb; pdb.set_trace()
             # for resuming
             iter = batch_idx + self.epoch * len(self.train_loader)
             if self.iter != 0 and (iter - 1) != self.iter:

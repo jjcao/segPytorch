@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-@todo 优化好像没有进行，完全没动，已经证实是trainer的问题。
+Q1: 优化好像没有进行，完全没动，
+solved: trainer的__init__(size_average=True)的问题，改成False就好了。
 
 Created on Thu Aug 10 15:57:43 2017
 
@@ -36,7 +37,7 @@ configurations = {
     
     2: dict(
         max_iteration=100000,
-        batch_size = 1,
+        batch_size = 4,
         num_workers = 4,
         lr=1.0e-10, # learning rate
         momentum=0.99,
@@ -138,21 +139,9 @@ def train(args):
     ########################################## 
     # 4. train  
     ##########################################
-#    from trainer import Trainer      
-#    trainer = Trainer(
-#        model=model,
-#        optimizer=optim,
-#        train_loader=train_loader,
-#        val_loader=val_loader,
-#        out=log_dir,
-#        max_iter=cfg['max_iteration'],
-#        l_rate = cfg['lr'],
-#        interval_validate=cfg.get('interval_validate', len(train_loader)),
-#    )
-
-    import torchfcn
     cuda = torch.cuda.is_available()
-    trainer = torchfcn.Trainer(
+    from trainer import Trainer      
+    trainer = Trainer(
         cuda=cuda,
         model=model,
         optimizer=optim,
@@ -160,8 +149,21 @@ def train(args):
         val_loader=val_loader,
         out=log_dir,
         max_iter=cfg['max_iteration'],
+        l_rate = cfg['lr'],
         interval_validate=cfg.get('interval_validate', len(train_loader)),
     )
+
+#    import torchfcn
+#    trainer = torchfcn.Trainer(
+#        cuda=cuda,
+#        model=model,
+#        optimizer=optim,
+#        train_loader=train_loader,
+#        val_loader=val_loader,
+#        out=log_dir,
+#        max_iter=cfg['max_iteration'],
+#        interval_validate=cfg.get('interval_validate', len(train_loader)),
+#    )
         
     trainer.epoch = start_epoch
     trainer.iteration = start_iteration
@@ -179,7 +181,7 @@ if __name__ == '__main__':
     parser.add_argument('--arch', nargs='?', type=str, default='fcn32s', 
                         help='Architecture to use [\'fcn8s, unet, segnet etc\']')
 
-    parser.add_argument('-c', '--config', type=int, default=1,
+    parser.add_argument('-c', '--config', type=int, default=2,
                         choices=configurations.keys())
     
     parser.add_argument('-g', '--gpu', type=str, default='0')
