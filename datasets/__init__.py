@@ -6,6 +6,7 @@ Created on Thu Aug 10 17:07:52 2017
 @author: jjcao
 """
 from datasets.voc_dataset import VocDataset
+#import transforms
 
 #__all__ = ['transforms']
 

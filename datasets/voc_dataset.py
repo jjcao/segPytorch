@@ -11,10 +11,8 @@ import os.path as osp
 import collections
 import numpy as np
 
-from skimage import io
+import PIL.Image
 from torch.utils.data import Dataset
-#from segPytorch.datasets import transforms
-#from transforms import Compose, Normalize, ToTensor
 
 # Ignore warnings
 import warnings
@@ -68,7 +66,7 @@ class VocDataset(Dataset):
         self.transform = transform
         self.files = collections.defaultdict(list)
         
-        for split in ['train', 'val', 'trainval', 'train_jjcao', 'val_jjcao']:
+        for split in ['train', 'val', 'trainval']:
             imset_file = osp.join(
                 dataset_dir, 'ImageSets/Segmentation/%s.txt' % split)
             for did in open(imset_file):
@@ -89,8 +87,11 @@ class VocDataset(Dataset):
 
     def __getitem__(self, index):
         data_file = self.files[self.split][index]
-        im = io.imread(data_file['im'])#.astype(np.uint8)
-        lbl = io.imread(data_file['lbl'])#.astype(np.int32)
+        
+        im = PIL.Image.open(data_file['im'])
+        im = np.array(im, dtype=np.uint8)
+        lbl = PIL.Image.open(data_file['lbl'])
+        lbl = np.array(lbl, dtype=np.int32)
         lbl[lbl == 255] = -1
          
         if self.transform:
@@ -99,21 +100,29 @@ class VocDataset(Dataset):
              return im, lbl
         #return {'image': im, 'label': lbl}
   
+    def untransform(self, img, lbl):
+        img = img.numpy()
+        img = img.transpose(1, 2, 0)
+        img += self.mean_bgr
+        img = img.astype(np.uint8)
+        img = img[:, :, ::-1]
+        lbl = lbl.numpy()
+        return img, lbl
     
-    def __iter__(self):
-        self.n = 0
-        self.max = self.__len__()
-        
-        return self
-    
-    def __next__(self):
-        if self.n <= self.max:
-            im, lbl = self.__getitem__(self.n)
-            self.n += 1
-        else:
-            raise StopIteration
-            
-        return im, lbl
+#    def __iter__(self):
+#        self.n = 0
+#        self.max = self.__len__()
+#        
+#        return self
+#    
+#    def __next__(self):
+#        if self.n <= self.max:
+#            im, lbl = self.__getitem__(self.n)
+#            self.n += 1
+#        else:
+#            raise StopIteration
+#            
+#        return im, lbl
 
 
         

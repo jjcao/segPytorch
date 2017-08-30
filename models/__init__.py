@@ -8,7 +8,6 @@ todo office choice between vgg16 and resnet-101, etc
 
 
 import torchvision.models as models
-import torch
 from models.fcn import fcn32s
 
 def get_model(name, n_classes, checkpoint):
@@ -23,8 +22,10 @@ def get_model(name, n_classes, checkpoint):
             model.load_state_dict(checkpoint['model_state_dict'])
             start_epoch = checkpoint['epoch']
             start_iteration = checkpoint['iteration']
-        else:
+        else:            
             vgg16 = models.vgg16(pretrained=True)
+#            from models.vgg import Vgg16
+#            vgg16 = Vgg16(pretrained=True)
             model.init_vgg16_params(vgg16)  
     else:
         raise 'Model {} not available'.format(name)

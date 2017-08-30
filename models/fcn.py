@@ -96,17 +96,28 @@ class fcn32s(nn.Module):
                   self.conv_block4,
                   self.conv_block5]
 
+        #print( self.conv_block1.children()[0].weight.size() )
         ranges = [[0, 4], [5, 9], [10, 16], [17, 23], [24, 29]]
         features = list(vgg16.features.children())
 
+        #print('before init')
+        #features[0].weight.data - self.conv_block1[0].weight.data
+#        import pdb; 
+#        pdb.set_trace()
+        
         for idx, conv_block in enumerate(blocks):
             for l1, l2 in zip(features[ranges[idx][0]:ranges[idx][1]], conv_block):
                 if isinstance(l1, nn.Conv2d) and isinstance(l2, nn.Conv2d):
-                    # print idx, l1, l2
+                    #print (idx, l1, l2)                    
                     assert l1.weight.size() == l2.weight.size()
                     assert l1.bias.size() == l2.bias.size()
                     l2.weight.data = l1.weight.data
                     l2.bias.data = l1.bias.data
+        
+#        print('after init')
+#        features[0].weight.data - self.conv_block1[0].weight.data
+#        pdb.set_trace()
+           
         for i1, i2 in zip([0, 3], [0, 3]):
             l1 = vgg16.classifier[i1]
             l2 = self.classifier[i2]

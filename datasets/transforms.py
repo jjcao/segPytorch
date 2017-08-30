@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# todo use PIL Image library recommended by pytorch, instead of skimage
+# todo update rescale, randomeCrop using PIL Image library recommended by pytorch, instead of skimage
 # maybe opencv for speed. (skimage is also awesome)
 
 Created on Wed Aug 16 23:46:38 2017
@@ -11,9 +11,8 @@ Created on Wed Aug 16 23:46:38 2017
 
 import torch
 import numpy as np
-#from torchvision import transforms
 from skimage import transform
-   
+#import PIL.Image   
 
 class Compose(object):
     """Composes several transforms together.
@@ -36,7 +35,7 @@ class Compose(object):
     
 class RandomCrop(object):
     """Crop randomly the image in a sample.
-
+        todo: use PIL image
     Args:
         output_size (tuple or int): Desired output size. If int, square crop is made.
     """
@@ -98,6 +97,12 @@ class Rescale(object):
             self.output_size = output_size       
 
     def __call__(self, im, lbl):
+#        im = PIL.Image.fromarray(im)
+#        im = im.resize(self.output_size, PIL.Image.BILINEAR)
+#        im = np.array(im)#, dtype=np.uint8)
+#        lbl = lbl.resize(self.output_size) #, PIL.Image.BILINEAR)
+#        lbl = np.array(lbl)#, dtype=np.int32)
+        
         im = transform.resize(im, self.output_size)
         lbl = lbl.astype(np.float64)
         lbl = transform.resize(lbl, self.output_size)
@@ -122,6 +127,7 @@ class UnNormalize(object):
 
     def __call__(self, im, lbl):
         im += self.mean_bgr
+        im = im.astype(np.uint8)
         im = im[:, :, ::-1]# BGR -> RGB
         return im, lbl  
     
@@ -147,6 +153,5 @@ class FromTensor(object):
 #        print('ToTensor')
 #        print(im.shape)
         im = im.transpose(1, 2, 0)
-        #im = im.astype(np.uint8)
         return im, lbl.numpy()
        

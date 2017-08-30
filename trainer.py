@@ -20,7 +20,7 @@ from datasets import transforms
 import math
 import numpy as np
 
-import utils
+from utils import utils
 import scipy
 
 def cross_entropy2d(input, target, weight=None, size_average=True):
@@ -145,7 +145,8 @@ class Trainer(object):
                     [transforms.FromTensor(), 
                      transforms.UnNormalize(self.val_loader.dataset.mean_bgr)])
             for img, lt, lp in zip(imgs, lbl_true, lbl_pred):
-                img, lt = transform(img, lt)
+                #img, lt = transform(img, lt)
+                img, lt = self.val_loader.dataset.untransform(img, lt)
                 label_trues.append(lt)
                 label_preds.append(lp)
                 if len(visualizations) < 9:
@@ -205,8 +206,8 @@ class Trainer(object):
 
             # for validate
             if self.iter % self.interval_validate == 0:
-                print(self.iter, self.interval_validate)
-                print(data.shape)
+#                print(self.iter, self.interval_validate)
+#                print(data.shape)
                 self.validate()
             
             # data preprocessing

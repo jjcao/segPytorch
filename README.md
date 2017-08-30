@@ -5,8 +5,10 @@ My first try.
 * python 3.6
 * torchvision >= 0.1.8
 * visdom >=1.0.1 (for loss and results visualization)
-* scipy
+* Pillow for simple image operations
 * tqdm
+* scipy?
+
 
 # One-line installation
 `pip install -r requirements.txt`

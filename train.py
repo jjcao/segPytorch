@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+@todo 优化好像没有进行，完全没动，已经证实是trainer的问题。
+
 Created on Thu Aug 10 15:57:43 2017
 
 @author: jjcao
@@ -17,8 +19,6 @@ import os.path as osp
 import datetime
 import pytz
 import yaml
-
-from trainer import Trainer
 
 here = osp.dirname(osp.abspath(__file__))
 configurations = {
@@ -45,10 +45,6 @@ configurations = {
     )
 }
 
-#def git_hash():
-#    cmd = 'git log -n 1 --pretty="%h"'
-#    hash = subprocess.check_output(shlex.split(cmd)).strip()
-#    return hash
 
 def get_log_dir(model_name, config_id, cfg):
     # load config
@@ -71,7 +67,9 @@ def get_log_dir(model_name, config_id, cfg):
 
 
 def train(args):
+    ##########################################
     # 0. preparation
+    ##########################################
     # '0' for GPU 0; '0,2' for GPUs 0 and 2, etc
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
     cuda = torch.cuda.is_available();
@@ -82,24 +80,27 @@ def train(args):
     cfg = configurations[args.config]
     log_dir = get_log_dir(args.arch, args.config, cfg)
     
+    ##########################################
     # 1. dataset and dataloader    
+    ##########################################
     dataset_dir = '/Users/jjcao/Documents/jjcao_data/VOCdevkit/VOC2012/'
     Dataset = get_dataset(args.dataset)
     
     # 
-#    data_transform = transforms.Compose([Rescale(256), RandomCrop(224), 
-#                                   Normalize(), ToTensor() ])
+#    data_transform = transforms.Compose(
+#            [transforms.Normalize(Dataset.mean_bgr), 
+#            transforms.ToTensor() ]) # used by FCN   
     data_transform = transforms.Compose(
-            [transforms.Rescale((args.im_rows, args.im_cols)),
-            transforms.Normalize(Dataset.mean_bgr), 
-            transforms.ToTensor() ]) # used by FCN
+            [transforms.Normalize(Dataset.mean_bgr), 
+             transforms.Rescale((args.im_rows, args.im_cols)),
+             transforms.ToTensor() ]) 
 
-    dataset = Dataset(dataset_dir=dataset_dir, split='train_jjcao', transform=data_transform) 
+    dataset = Dataset(dataset_dir=dataset_dir, split='train', transform=data_transform) 
     
     kwargs = {'num_workers': cfg['num_workers'], 'pin_memory': True} if cuda else {'num_workers': cfg['num_workers']}  
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=cfg['batch_size'], 
                                                shuffle=True, **kwargs)
-    dataset = Dataset(dataset_dir=dataset_dir, split='val_jjcao', transform=data_transform)
+    dataset = Dataset(dataset_dir=dataset_dir, split='train', transform=data_transform)
     val_loader = torch.utils.data.DataLoader(dataset, batch_size=cfg['batch_size'],
                                              shuffle=False, **kwargs)
     if __debug__:
@@ -108,54 +109,60 @@ def train(args):
         im, lbl = dataset[0]
         print(im.shape, lbl.shape)
 
-#    test_image, test_segmap = dataset[0]
-#    if cuda:     
-#        test_image = Variable(test_image.unsqueeze(0).cuda(0))
-#    else:
-#        test_image = Variable(test_image.unsqueeze(0))
-
-
-    # Setup visdom for visualization
-#    import visdom
-#    vis = visdom.Visdom()
-#
-#    loss_window = vis.line(X=torch.zeros((1,)).cpu(),
-#                           Y=torch.zeros((1)).cpu(),
-#                           opts=dict(xlabel='minibatches',
-#                                     ylabel='Loss',
-#                                     title='Training Loss',
-#                                     legend=['Loss']))
- 
-   
+    ##########################################
     # 2. model
+    ##########################################
     checkpoint = None
     if args.resume:
         checkpoint = torch.load(args.resume)
         
-    model, start_epoch,  start_iteration= get_model(args.arch, 
-                                                    len(dataset.class_names),
+    model, start_epoch, start_iteration = get_model(args.arch, 
+                                                    len(Dataset.class_names),
                                                     checkpoint)
     if cuda:
         model = model.cuda()        
-    
-    # 3. optimizer  
-    optimizer = torch.optim.SGD(model.parameters(), lr=cfg['lr'], 
+#    if __debug__:
+#        print("Model: {}. Training begin at {}".format(args.resume))
+#    return 
+
+    ##########################################
+    # 3. optimizer
+    ##########################################
+    #import pdb; pdb.set_trace()
+    optim = torch.optim.SGD(model.parameters(), lr=cfg['lr'], 
                                 momentum=cfg['momentum'], weight_decay=cfg['weight_decay'])
     if args.resume:
-        optimizer.load_state_dict(checkpoint['optim_state_dict'])
- 
-     
-    # 4. train        
-    trainer = Trainer(
+        optim.load_state_dict(checkpoint['optim_state_dict'])
+
+        
+    ########################################## 
+    # 4. train  
+    ##########################################
+#    from trainer import Trainer      
+#    trainer = Trainer(
+#        model=model,
+#        optimizer=optim,
+#        train_loader=train_loader,
+#        val_loader=val_loader,
+#        out=log_dir,
+#        max_iter=cfg['max_iteration'],
+#        l_rate = cfg['lr'],
+#        interval_validate=cfg.get('interval_validate', len(train_loader)),
+#    )
+
+    import torchfcn
+    cuda = torch.cuda.is_available()
+    trainer = torchfcn.Trainer(
+        cuda=cuda,
         model=model,
-        optimizer=optimizer,
+        optimizer=optim,
         train_loader=train_loader,
         val_loader=val_loader,
         out=log_dir,
         max_iter=cfg['max_iteration'],
-        l_rate = cfg['lr'],
         interval_validate=cfg.get('interval_validate', len(train_loader)),
     )
+        
     trainer.epoch = start_epoch
     trainer.iteration = start_iteration
     trainer.train()
