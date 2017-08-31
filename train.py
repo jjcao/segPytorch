@@ -25,24 +25,44 @@ here = osp.dirname(osp.abspath(__file__))
 configurations = {
     # same configuration as original work
     # https://github.com/shelhamer/fcn.berkeleyvision.org
-    1: dict(
-        max_iteration=200,
-        batch_size = 1,
-        num_workers = 4,
+    1: dict( # for test
+        max_iteration=100000,
         lr=1.0e-10, # learning rate
         momentum=0.99,
         weight_decay=0.0005,
-        interval_validate=50,
-    ),
-    
-    2: dict(
-        max_iteration=100000,
-        batch_size = 4,
+        interval_validate=40,
+        batch_size = 1,
         num_workers = 4,
+    ),
+    2: dict( # for fcn32s
+        max_iteration=100000,
         lr=1.0e-10, # learning rate
         momentum=0.99,
         weight_decay=0.0005,
         interval_validate=4000,
+        batch_size = 1,
+        num_workers = 4,
+    ),        
+    3: dict( # for fcn16s
+        max_iteration=100000,
+        lr=1.0e-12,
+        momentum=0.99,
+        weight_decay=0.0005,
+        interval_validate=4000,
+        batch_size = 1,
+        num_workers = 4,
+        fcn32s_pretrained_model='?.pth.tar',
+    ),
+        
+    4: dict( # for fcn8s
+        max_iteration=100000,
+        lr=1.0e-14,
+        momentum=0.99,
+        weight_decay=0.0005,
+        interval_validate=4000,
+        batch_size = 1,
+        num_workers = 4,
+        fcn16s_pretrained_model='?.pth.tar',
     )
 }
 
@@ -119,7 +139,7 @@ def train(args):
         
     model, start_epoch, start_iteration = get_model(args.arch, 
                                                     len(Dataset.class_names),
-                                                    checkpoint)
+                                                    checkpoint, cfg)
     if cuda:
         model = model.cuda()        
 #    if __debug__:
@@ -181,11 +201,14 @@ if __name__ == '__main__':
     parser.add_argument('--arch', nargs='?', type=str, default='fcn32s', 
                         help='Architecture to use [\'fcn8s, unet, segnet etc\']')
 
-    parser.add_argument('-c', '--config', type=int, default=2,
+    parser.add_argument('-c', '--config', type=int, default=1,
                         choices=configurations.keys())
     
     parser.add_argument('-g', '--gpu', type=str, default='0')
+  
     parser.add_argument('--resume', help='Checkpoint path')
+#    parser.add_argument('--resume', help='Checkpoint path', type=str, 
+#          default='./logs/MODEL-fcn32s_CFG-001_MAX_ITERATION-100000_BATCH_SIZE-1_NUM_WORKERS-4_LR-1e-10_MOMENTUM-0.99_WEIGHT_DECAY-0.0005_INTERVAL_VALIDATE-40_TIME-20170831-161727/checkpoint.pth.tar')
             
     parser.add_argument('--im_rows', nargs='?', type=int, default=256, 
                         help='Height of the input image')
