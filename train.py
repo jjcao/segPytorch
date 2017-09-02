@@ -198,8 +198,8 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', nargs='?', type=str, default='pascal', 
                         help='Dataset to use [\'pascal, camvid, ade20k etc\']')
      
-    parser.add_argument('--arch', nargs='?', type=str, default='fcn32s', 
-                        help='Architecture to use [\'fcn8s, unet, segnet etc\']')
+    parser.add_argument('--arch', nargs='?', type=str, default='linknet', 
+                        help='Architecture to use [\'fcn8s, unet, segnet, linknet, pspnet etc\']')
 
     parser.add_argument('-c', '--config', type=int, default=1,
                         choices=configurations.keys())

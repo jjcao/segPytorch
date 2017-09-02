@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+based on pytorch-semseg and pytorch-fcn
+
 @ todo: test staged training
 @ todo: We experiment with both staged training and all-at-once training.
 Created on Thu Aug 17 00:22:19 2017
@@ -121,6 +123,7 @@ class FCN32s(FCN):
         
     def forward(self, x):
         score = super(FCN32s, self).forward(x)
+        import pdb; pdb.set_trace()
         out = F.upsample_bilinear(score, x.size()[2:])
         return out
   

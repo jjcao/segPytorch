@@ -1,5 +1,15 @@
 # segPytorch
 My first try.
+
+# Implemented models
+FCN32s, pass init test
+FCN16s, not tested
+FCN8s, not tested
+Unet, not tested
+Segnet, init test is very bad
+Linknet, init testing is as same as segnet. But linknet is very fast.
+Pspnet, not tested
+
 # Requirements
 * pytorch >= 0.2.0
 * python 3.6
@@ -8,6 +18,7 @@ My first try.
 * Pillow for simple image operations
 * tqdm
 * scipy?
+
 
 
 # One-line installation
