@@ -81,7 +81,7 @@ class FCN(nn.Module):
         return score
     
     def init_vgg16_params(self, vgg16, copy_fc8=False):    
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         #print(len(self.conv_blocks))      
         #print( self.conv_block1.children()[0].weight.size() )
         ranges = [[0, 4], [5, 9], [10, 16], [17, 23], [24, 29]]
@@ -123,7 +123,7 @@ class FCN32s(FCN):
         
     def forward(self, x):
         score = super(FCN32s, self).forward(x)
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         out = F.upsample_bilinear(score, x.size()[2:])
         return out
   

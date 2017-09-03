@@ -43,7 +43,8 @@ def cross_entropy2d(input, target, weight=None, size_average=True):
 class Trainer(object):
 
     def __init__(self, cuda, model, optimizer,
-                 train_loader, val_loader, out, max_iter, l_rate=1.0e-10,
+                 train_loader, val_loader, out, max_iter, 
+                 l_rate=1.0e-10, l_rate_decay = 1.0, lrDecayEvery=10,
                  size_average=False, interval_validate=None):
         # max_iter: max number of iterations: in each interation a batch of data are used.
        
@@ -90,7 +91,9 @@ class Trainer(object):
         self.epoch = 0 # current epoch
         self.iter = 0 # current iteration
         self.max_iter = max_iter
-        self.base_l_rate = l_rate # base learning rate
+        self.l_rate = l_rate # base learning rate
+        self.l_rate_decay = l_rate_decay
+        self.lrDecayEvery = lrDecayEvery
         self.best_mean_iu = 0
 
 
@@ -241,6 +244,11 @@ class Trainer(object):
         max_epoch = int(math.ceil(1. * self.max_iter / len(self.train_loader)))
         for epoch in tqdm.trange(self.epoch, max_epoch, desc='Train', ncols=80):
             self.epoch = epoch
+            if epoch % self.lrDecayEvery == 0:
+                self.l_rate = self.l_rate * self.l_rate_decay
+                for param_group in self.optim.param_groups:
+                    param_group['lr'] = self.l_rate
+
             self.train_epoch()
             if self.iter >= self.max_iter:
                 break

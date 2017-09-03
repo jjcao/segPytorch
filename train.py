@@ -63,7 +63,19 @@ configurations = {
         batch_size = 1,
         num_workers = 4,
         fcn16s_pretrained_model='?.pth.tar',
-    )
+    ),
+    5: dict( # for linknet
+        max_iteration=100000,
+        lr=5.0e-4, # learning rate
+        lrd=5.0e-1, #learningRateDecay
+        lrde= 10, #lrDecayEvery (default 100) Decay learning rate every X epoch by 1e-1
+        interval_validate=40,
+        batch_size = 4, # default 8
+        momentum=0.99,
+        weight_decay=2e-4,
+        
+        num_workers = 4,
+    ),
 }
 
 
@@ -86,7 +98,14 @@ def get_log_dir(model_name, config_id, cfg):
         yaml.safe_dump(cfg, f, default_flow_style=False)
     return log_dir
 
-
+def get_optimizer(name):
+    return {
+        'fcn8s': torch.optim.SGD,
+        'fcn16s': torch.optim.SGD,
+        'fcn32s': torch.optim.SGD,
+        'linknet': torch.optim.RMSprop,
+    }[name]
+    
 def train(args):
     ##########################################
     # 0. preparation
@@ -150,8 +169,10 @@ def train(args):
     # 3. optimizer
     ##########################################
     #import pdb; pdb.set_trace()
-    optim = torch.optim.SGD(model.parameters(), lr=cfg['lr'], 
+    Optimizer = get_optimizer(args.arch)
+    optim = Optimizer(model.parameters(), lr=cfg['lr'], 
                                 momentum=cfg['momentum'], weight_decay=cfg['weight_decay'])
+    
     if args.resume:
         optim.load_state_dict(checkpoint['optim_state_dict'])
 
@@ -170,20 +191,9 @@ def train(args):
         out=log_dir,
         max_iter=cfg['max_iteration'],
         l_rate = cfg['lr'],
+        l_rate_decay = cfg.get('lrd', 1.0),
         interval_validate=cfg.get('interval_validate', len(train_loader)),
     )
-
-#    import torchfcn
-#    trainer = torchfcn.Trainer(
-#        cuda=cuda,
-#        model=model,
-#        optimizer=optim,
-#        train_loader=train_loader,
-#        val_loader=val_loader,
-#        out=log_dir,
-#        max_iter=cfg['max_iteration'],
-#        interval_validate=cfg.get('interval_validate', len(train_loader)),
-#    )
         
     trainer.epoch = start_epoch
     trainer.iteration = start_iteration
@@ -201,7 +211,7 @@ if __name__ == '__main__':
     parser.add_argument('--arch', nargs='?', type=str, default='linknet', 
                         help='Architecture to use [\'fcn8s, unet, segnet, linknet, pspnet etc\']')
 
-    parser.add_argument('-c', '--config', type=int, default=1,
+    parser.add_argument('-c', '--config', type=int, default=5,
                         choices=configurations.keys())
     
     parser.add_argument('-g', '--gpu', type=str, default='0')
