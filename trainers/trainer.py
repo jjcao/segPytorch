@@ -94,9 +94,8 @@ class Trainer(object):
         self.l_rate = l_rate # base learning rate
         self.l_rate_decay = l_rate_decay
         self.lrDecayEvery = lrDecayEvery
-        self.best_mean_iu = 0
-
-
+        self.best_mean_iu = 0    
+                
     def validate(self):
         #Sets the module in evaluation mode.
         #This has any effect only on modules such as Dropout or BatchNorm.
@@ -174,7 +173,15 @@ class Trainer(object):
             shutil.copy(osp.join(self.out, 'checkpoint.pth.tar'),
                         osp.join(self.out, 'model_best.pth.tar'))       
 
-
+    
+    def compute_loss(self, score, target):
+        loss = cross_entropy2d(score, target, size_average=self.size_average) # todo average or not?
+        loss /= len(target) 
+        if np.isnan(float(loss.data[0])):
+            raise ValueError('loss is nan while training')
+            
+        return loss
+    
     def train_epoch(self):       
         self.model.train()#Sets the module in train mode.
 
@@ -208,11 +215,7 @@ class Trainer(object):
             # optimize
             self.optim.zero_grad()
             score = self.model(data)
-
-            loss = cross_entropy2d(score, target, size_average=self.size_average) # todo average or not?
-            loss /= len(data) # todo is it necessary?
-            if np.isnan(float(loss.data[0])):
-                raise ValueError('loss is nan while training')
+            loss = self.compute_loss(score, target)                
             loss.backward()
             self.optim.step()
 

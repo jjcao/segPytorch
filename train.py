@@ -8,12 +8,9 @@ Created on Thu Aug 10 15:57:43 2017
 
 @author: jjcao
 """
+#import pdb; pdb.set_trace()
 import argparse
-from datasets import get_dataset
-from datasets import transforms
-from models import get_model
-import torch
-#from torchvision import transforms
+import configparser
 
 import os
 import os.path as osp
@@ -21,67 +18,32 @@ import datetime
 import pytz
 import yaml
 
-here = osp.dirname(osp.abspath(__file__))
-configurations = {
-    # same configuration as original work
-    # https://github.com/shelhamer/fcn.berkeleyvision.org
-    1: dict( # for test
-        max_iteration=100000,
-        lr=1.0e-10, # learning rate
-        momentum=0.99,
-        weight_decay=0.0005,
-        interval_validate=40,
-        batch_size = 1,
-        num_workers = 4,
-    ),
-    2: dict( # for fcn32s
-        max_iteration=100000,
-        lr=1.0e-10, # learning rate
-        momentum=0.99,
-        weight_decay=0.0005,
-        interval_validate=4000,
-        batch_size = 1,
-        num_workers = 4,
-    ),        
-    3: dict( # for fcn16s
-        max_iteration=100000,
-        lr=1.0e-12,
-        momentum=0.99,
-        weight_decay=0.0005,
-        interval_validate=4000,
-        batch_size = 1,
-        num_workers = 4,
-        fcn32s_pretrained_model='?.pth.tar',
-    ),
-        
-    4: dict( # for fcn8s
-        max_iteration=100000,
-        lr=1.0e-14,
-        momentum=0.99,
-        weight_decay=0.0005,
-        interval_validate=4000,
-        batch_size = 1,
-        num_workers = 4,
-        fcn16s_pretrained_model='?.pth.tar',
-    ),
-    5: dict( # for linknet
-        max_iteration=100000,
-        lr=5.0e-4, # learning rate
-        lrd=5.0e-1, #learningRateDecay
-        lrde= 10, #lrDecayEvery (default 100) Decay learning rate every X epoch by 1e-1
-        interval_validate=40,
-        batch_size = 4, # default 8
-        momentum=0.99,
-        weight_decay=2e-4,
-        
-        num_workers = 4,
-    ),
-}
+import torch
 
+from datasets import get_dataset
+from datasets import transforms
 
-def get_log_dir(model_name, config_id, cfg):
+import ast
+
+def read_cfg(cfg_dir):
+    cfgp = configparser.ConfigParser()
+    cfgp.read(cfg_dir)
+    #cfgp.sections()
+    cfg = cfgp['CONFIG']
+    args = cfgp['ARGUMENT']
+    
+    args = dict( zip(args.keys(), args.values()) )  
+    
+    val = []
+    for v in cfg.values():
+        val.append(ast.literal_eval(v))
+        
+    cfg = dict( zip(cfg.keys(), val) ) 
+    return args, cfg
+
+def get_log_dir(model_name, cfg):
     # load config
-    name = 'MODEL-%s_CFG-%03d' % (model_name, config_id)
+    name = model_name
     for k, v in cfg.items():
         v = str(v)
         if '/' in v:
@@ -91,6 +53,7 @@ def get_log_dir(model_name, config_id, cfg):
     # name += '_VCS-%s' % git_hash() # git_hash() need install command line tool or x-code?
     name += '_TIME-%s' % now.strftime('%Y%m%d-%H%M%S')
     # create out
+    here = osp.dirname(osp.abspath(__file__))
     log_dir = osp.join(here, 'logs', name)
     if not osp.exists(log_dir):
         os.makedirs(log_dir)
@@ -100,88 +63,101 @@ def get_log_dir(model_name, config_id, cfg):
 
 def get_optimizer(name):
     return {
-        'fcn8s': torch.optim.SGD,
-        'fcn16s': torch.optim.SGD,
-        'fcn32s': torch.optim.SGD,
-        'linknet': torch.optim.RMSprop,
+        'SGD': torch.optim.SGD,
+        'RMSprop': torch.optim.RMSprop,
     }[name]
+ 
+    
     
 def train(args):
     ##########################################
     # 0. preparation
     ##########################################
-    # '0' for GPU 0; '0,2' for GPUs 0 and 2, etc
-    os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
+    args, cfg = read_cfg(args.config)
+        
+    os.environ['CUDA_VISIBLE_DEVICES'] = args['gpu']
     cuda = torch.cuda.is_available();
     torch.manual_seed(1337)
     if cuda:
         torch.cuda.manual_seed(1337)
         
-    cfg = configurations[args.config]
-    log_dir = get_log_dir(args.arch, args.config, cfg)
+    log_dir = get_log_dir(args['model'], cfg)
+    
     
     ##########################################
     # 1. dataset and dataloader    
     ##########################################
-    dataset_dir = '/Users/jjcao/Documents/jjcao_data/VOCdevkit/VOC2012/'
-    Dataset = get_dataset(args.dataset)
+    dataset_dir = args['dataset_dir']
+    Dataset = get_dataset(args['dataset'])
     
-    # 
-#    data_transform = transforms.Compose(
-#            [transforms.Normalize(Dataset.mean_bgr), 
-#            transforms.ToTensor() ]) # used by FCN   
-    data_transform = transforms.Compose(
-            [transforms.Normalize(Dataset.mean_bgr), 
-             transforms.Rescale((args.im_rows, args.im_cols)),
-             transforms.ToTensor() ]) 
+    if 'im_rows' in args:
+        data_transform = transforms.Compose(
+                [transforms.Normalize(Dataset.mean_bgr), 
+                 transforms.Rescale( ( int(args['im_rows']), int(args['im_cols']) ) ),
+                 transforms.ToTensor() ]) 
+    else:     
+        data_transform = transforms.Compose(
+                [transforms.Normalize(Dataset.mean_bgr), 
+                transforms.ToTensor() ]) # used by FCN   
 
+    
     dataset = Dataset(dataset_dir=dataset_dir, split='train', transform=data_transform) 
     
-    kwargs = {'num_workers': cfg['num_workers'], 'pin_memory': True} if cuda else {'num_workers': cfg['num_workers']}  
-    train_loader = torch.utils.data.DataLoader(dataset, batch_size=cfg['batch_size'], 
+    batch_size = int(args['batch_size'])
+    num_workers = int(args['num_workers'])
+    # does num_workers work if CPU?
+    # kwargs = {'num_workers': cfg['num_workers'], 'pin_memory': True} if cuda else {} 
+    kwargs = {'num_workers': num_workers, 'pin_memory': True} if cuda else {'num_workers': num_workers}  
+    train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, 
                                                shuffle=True, **kwargs)
     dataset = Dataset(dataset_dir=dataset_dir, split='train', transform=data_transform)
-    val_loader = torch.utils.data.DataLoader(dataset, batch_size=cfg['batch_size'],
+    val_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
                                              shuffle=False, **kwargs)
     if __debug__:
         print("batch size is {}, length of train_loader is {}".
-                                      format(cfg['batch_size'], len(train_loader)))
+                                      format(batch_size, len(train_loader)))
         im, lbl = dataset[0]
         print(im.shape, lbl.shape)
+
 
     ##########################################
     # 2. model
     ##########################################
+    
+    from models import get_model
     checkpoint = None
-    if args.resume:
-        checkpoint = torch.load(args.resume)
+    #import pdb; pdb.set_trace()
+    if ('checkpoint_dir' in args) and (len(args['checkpoint_dir'])>0):
+        checkpoint = torch.load(args['checkpoint_dir'])
         
-    model, start_epoch, start_iteration = get_model(args.arch, 
+    model, start_epoch, start_iteration = get_model(args['model'], 
                                                     len(Dataset.class_names),
-                                                    checkpoint, cfg)
+                                                    checkpoint, args)
     if cuda:
         model = model.cuda()        
 #    if __debug__:
 #        print("Model: {}. Training begin at {}".format(args.resume))
 #    return 
 
+
     ##########################################
     # 3. optimizer
     ##########################################
-    #import pdb; pdb.set_trace()
-    Optimizer = get_optimizer(args.arch)
+    
+    Optimizer = get_optimizer(args['optimizer'])
     optim = Optimizer(model.parameters(), lr=cfg['lr'], 
                                 momentum=cfg['momentum'], weight_decay=cfg['weight_decay'])
     
-    if args.resume:
+    if ('checkpoint_dir' in args) and (len(args['checkpoint_dir'])>0):
         optim.load_state_dict(checkpoint['optim_state_dict'])
 
         
     ########################################## 
     # 4. train  
     ##########################################
-    cuda = torch.cuda.is_available()
-    from trainer import Trainer      
+       
+    from trainers import get_trainer
+    Trainer = get_trainer(args['trainer']) 
     trainer = Trainer(
         cuda=cuda,
         model=model,
@@ -189,7 +165,7 @@ def train(args):
         train_loader=train_loader,
         val_loader=val_loader,
         out=log_dir,
-        max_iter=cfg['max_iteration'],
+        max_iter=cfg['max_iter'],
         l_rate = cfg['lr'],
         l_rate_decay = cfg.get('lrd', 1.0),
         interval_validate=cfg.get('interval_validate', len(train_loader)),
@@ -203,31 +179,8 @@ def train(args):
 if __name__ == '__main__':
     #torch.set_num_threads(1)
     
-    parser = argparse.ArgumentParser(description='Hyperparams')
-    
-    parser.add_argument('--dataset', nargs='?', type=str, default='pascal', 
-                        help='Dataset to use [\'pascal, camvid, ade20k etc\']')
-     
-    parser.add_argument('--arch', nargs='?', type=str, default='linknet', 
-                        help='Architecture to use [\'fcn8s, unet, segnet, linknet, pspnet etc\']')
-
-    parser.add_argument('-c', '--config', type=int, default=5,
-                        choices=configurations.keys())
-    
-    parser.add_argument('-g', '--gpu', type=str, default='0')
-  
-    parser.add_argument('--resume', help='Checkpoint path')
-#    parser.add_argument('--resume', help='Checkpoint path', type=str, 
-#          default='./logs/MODEL-fcn32s_CFG-001_MAX_ITERATION-100000_BATCH_SIZE-1_NUM_WORKERS-4_LR-1e-10_MOMENTUM-0.99_WEIGHT_DECAY-0.0005_INTERVAL_VALIDATE-40_TIME-20170831-161727/checkpoint.pth.tar')
-            
-    parser.add_argument('--im_rows', nargs='?', type=int, default=256, 
-                        help='Height of the input image')
-    parser.add_argument('--im_cols', nargs='?', type=int, default=256, 
-                        help='Height of the input image')
-    
-    parser.add_argument('--feature_scale', nargs='?', type=int, default=1, 
-                        help='Divider for # of features to use') 
-    
+    parser = argparse.ArgumentParser(description='Hyperparams')    
+    parser.add_argument('-c', '--config', type=str, default='config_fcn32s_cpu.ini') 
     args = parser.parse_args()
     
     train(args)

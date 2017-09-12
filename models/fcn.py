@@ -14,7 +14,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 cfg = {
-    '32s-vgg16': [[64, 64],         #conv_block1
+    'vgg16': [[64, 64],         #conv_block1
                   [128, 128],
                   [256, 256, 256],  #conv_block3
                   [512, 512, 512], 
@@ -63,13 +63,18 @@ class FCN(nn.Module):
         self.learned_billinear = learned_billinear
         self.n_classes = n_classes
         
-        self.conv_blocks, self.classifier = make_layers_vgg16(cfg['32s-vgg16'], self.n_classes)  
+        self.conv_blocks, self.classifier = make_layers_vgg16(cfg['vgg16'], self.n_classes)  
 
         # TODO: Add support for learned upsampling
         if self.learned_billinear:
             raise NotImplementedError
             # upscore = nn.ConvTranspose2d(self.n_classes, self.n_classes, 64, stride=32, bias=False)
             # upscore.scale_factor = None
+            
+# FCN32s
+class FCN32s(FCN):
+    def __init__(self, n_classes=21, learned_billinear=False):
+        super(FCN32s, self).__init__(n_classes, learned_billinear)
 
     def forward(self, x):
         input = x
@@ -78,8 +83,9 @@ class FCN(nn.Module):
             input = out
             
         score = self.classifier(out)
-        return score
-    
+        out = F.upsample_bilinear(score, x.size()[2:])
+        return out 
+         
     def init_vgg16_params(self, vgg16, copy_fc8=False):    
         #import pdb; pdb.set_trace()
         #print(len(self.conv_blocks))      
@@ -116,34 +122,27 @@ class FCN(nn.Module):
             l2.weight.data = l1.weight.data[:n_class, :].view(l2.weight.size())
             l2.bias.data = l1.bias.data[:n_class]
             
-# FCN32s
-class FCN32s(FCN):
-    def __init__(self, n_classes=21, learned_billinear=False):
-        super(FCN32s, self).__init__(n_classes, learned_billinear)
-        
-    def forward(self, x):
-        score = super(FCN32s, self).forward(x)
-        #import pdb; pdb.set_trace()
-        out = F.upsample_bilinear(score, x.size()[2:])
-        return out
-  
-            
 # FCN16s
 class FCN16s(FCN):
     def __init__(self, n_classes=21, learned_billinear=False):
         super(FCN16s, self).__init__(n_classes, learned_billinear)
         self.score_pool4 = nn.Conv2d(512, self.n_classes, 1)
-        
+
     def forward(self, x):
-        score = super(FCN16s, self).forward(x)
-        conv4 = self.conv_blocks[3]
+        conv1 = self.conv_blocks[0](x)
+        conv2 = self.conv_blocks[1](conv1)
+        conv3 = self.conv_blocks[2](conv2)
+        conv4 = self.conv_blocks[3](conv3)
+        conv5 = self.conv_blocks[4](conv4)
+
+        score = self.classifier(conv5)
         score_pool4 = self.score_pool4(conv4)
+
         score = F.upsample_bilinear(score, score_pool4.size()[2:])
         score += score_pool4
-
         out = F.upsample_bilinear(score, x.size()[2:])
-
-        return out
+        
+        return out   
     
     def init_fcn32s_params(self, fcn32s):
         for name, l1 in fcn32s.named_children():
@@ -165,20 +164,24 @@ class FCN8s(FCN):
         super(FCN8s, self).__init__(n_classes, learned_billinear)
         self.score_pool4 = nn.Conv2d(512, self.n_classes, 1)
         self.score_pool3 = nn.Conv2d(256, self.n_classes, 1)
-        
-    def forward(self, x):
-        score = super(FCN8s, self).forward(x)
-        
-        score = self.classifier(self.conv_blocks[4])
-        score_pool4 = self.score_pool4(self.conv_blocks[3])
-        score_pool3 = self.score_pool3(self.conv_blocks[2])
 
+    def forward(self, x):
+        conv1 = self.conv_blocks[0](x)
+        conv2 = self.conv_blocks[1](conv1)
+        conv3 = self.conv_blocks[2](conv2)
+        conv4 = self.conv_blocks[3](conv3)
+        conv5 = self.conv_blocks[4](conv4)
+
+        score = self.classifier(conv5)
+        score_pool4 = self.score_pool4(conv4)
+        score_pool3 = self.score_pool3(conv3)
+        
         score = F.upsample_bilinear(score, score_pool4.size()[2:])
         score += score_pool4
         score = F.upsample_bilinear(score, score_pool3.size()[2:])
         score += score_pool3
         out = F.upsample_bilinear(score, x.size()[2:])
-
+        
         return out
     
     def copy_params_from_fcn16s(self, fcn16s):

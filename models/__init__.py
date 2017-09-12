@@ -28,7 +28,7 @@ model_dict = {
     'linknet': Linknet,
 }
     
-def get_model(name, n_classes, checkpoint, cfg):
+def get_model(name, n_classes, checkpoint, args):
     model = model_dict[name]
 
     start_epoch = 0
@@ -49,12 +49,12 @@ def get_model(name, n_classes, checkpoint, cfg):
                 model.init_vgg16_params(vgg16)  
             elif name == 'fcn16s':
                 fcn32s = FCN32s(n_classes=n_classes)
-                fcn32s.load_state_dict(torch.load(cfg['fcn32s_pretrained_model']))
+                fcn32s.load_state_dict(torch.load(args['fcn32s_pretrained_model']))
                 model.copy_params_from_fcn32s(fcn32s)
                 model.init_vgg16_params(vgg16)
             elif name == 'fcn8s':
                 fcn16s = FCN32s(n_classes=n_classes)
-                fcn16s.load_state_dict(torch.load(cfg['fcn16s_pretrained_model']))
+                fcn16s.load_state_dict(torch.load(args['fcn16s_pretrained_model']))
                 model.copy_params_from_fcn16s(fcn16s)
             else:
                 return model, start_epoch, start_iteration

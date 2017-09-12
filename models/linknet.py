@@ -73,7 +73,7 @@ class Linknet(nn.Module):
         self.decoder4 = linknetUp(filters[3]*expansion, filters[2]*expansion)
         self.decoder3 = linknetUp(filters[2]*expansion, filters[1]*expansion)
         self.decoder2 = linknetUp(filters[1]*expansion, filters[0]*expansion)
-        self.decoder1 = linknetUp(filters[0]*expansion, filters[0])
+        self.decoder1 = linknetUp(filters[0]*expansion, filters[0]) 
 
         # Final Classifier
         self.finaldeconvbnrelu1 = deconv2DBatchNormRelu(filters[0], 32/feature_scale, 2, 2, 0)
