@@ -13,16 +13,25 @@ Pspnet, not tested
 # Requirements
 * pytorch >= 0.2.0
 * python 3.6
+* CUDA 8.0
 * torchvision >= 0.1.8
 * visdom >=1.0.1 (for loss and results visualization)
 * Pillow for simple image operations
 * tqdm
-* scipy?
+* scipy
 
 
 
 # One-line installation
-`pip install -r requirements.txt`
+```bash
+git clone https://github.com/jjcao/segPytorch.git
+
+cd segPytorch
+
+conda install pytorch torchvision cuda80 -c soumith
+
+pip install -r requirements.txt
+```
 
 # Reference code
 1. https://github.com/meetshah1995/pytorch-semseg
