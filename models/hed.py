@@ -64,11 +64,15 @@ class Hed(nn.Module):
             conv = convblock(input)
             score = sideblock(conv)
             score = F.upsample_bilinear(score, x.size()[2:])
-            sidescore.append(score)  
+            sidescore.append(score) 
+            input = conv
         
+        import pdb; pdb.set_trace()
+        #concat = torch.cat(*sidescore, dim=1)
+        #TypeError: cat() got multiple values for argument 'dim'
         concat = torch.cat(*sidescore, dim=1)
         fuse = self.fuse(concat)
-        return sidescore, fuse
+        return fuse, sidescore
 
     
     def init_vgg16_params(self, vgg16, copy_fc8=False):    

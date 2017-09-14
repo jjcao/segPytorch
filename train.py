@@ -180,7 +180,7 @@ if __name__ == '__main__':
     #torch.set_num_threads(1)
     
     parser = argparse.ArgumentParser(description='Hyperparams')    
-    parser.add_argument('-c', '--config', type=str, default='config_fcn32s_cpu.ini') 
+    parser.add_argument('-c', '--config', type=str, default='config_hed.ini') 
     args = parser.parse_args()
     
     train(args)

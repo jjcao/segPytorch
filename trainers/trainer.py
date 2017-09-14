@@ -174,13 +174,19 @@ class Trainer(object):
                         osp.join(self.out, 'model_best.pth.tar'))       
 
     
-    def compute_loss(self, score, target):
+    def optimize(self, data, target):
+        self.optim.zero_grad()
+        score = self.model(data)
+        
         loss = cross_entropy2d(score, target, size_average=self.size_average) # todo average or not?
         loss /= len(target) 
         if np.isnan(float(loss.data[0])):
             raise ValueError('loss is nan while training')
-            
-        return loss
+                       
+        loss.backward()
+        self.optim.step()
+     
+        return score
     
     def train_epoch(self):       
         self.model.train()#Sets the module in train mode.
@@ -213,11 +219,7 @@ class Trainer(object):
             
             
             # optimize
-            self.optim.zero_grad()
-            score = self.model(data)
-            loss = self.compute_loss(score, target)                
-            loss.backward()
-            self.optim.step()
+            score = self.optimize(data, target)
 
             # logging
             metrics = []

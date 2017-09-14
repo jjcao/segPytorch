@@ -17,6 +17,7 @@ from models.segnet import Segnet
 from models.unet import Unet
 from models.pspnet import Pspnet
 from models.linknet import Linknet
+from models.hed import Hed
 
 model_dict = {
     'fcn32s': FCN32s,
@@ -26,6 +27,7 @@ model_dict = {
     'segnet': Segnet,
     'pspnet': Pspnet,
     'linknet': Linknet,
+    'hed': Hed,
 }
     
 def get_model(name, n_classes, checkpoint, args):

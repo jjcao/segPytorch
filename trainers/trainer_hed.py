@@ -8,6 +8,7 @@ Created on Wed Sep  6 15:06:58 2017
 
 from trainers.trainer import Trainer, cross_entropy2d
 
+import numpy as np
 
 class TrainerHed(Trainer):
 
@@ -20,15 +21,23 @@ class TrainerHed(Trainer):
                  l_rate, l_rate_decay, lrDecayEvery,
                  size_average, interval_validate)
       
-
-    def compute_loss(self, score, target):
+    def optimize(self, data, target):
+        self.optim.zero_grad()
+        fuse_score, side_scores = self.model(data)
+        
         loss = []
-        for i in range(len(score)):
-            tmp = cross_entropy2d(score[i], target, size_average=self.size_average) # todo average or not?
+        for i in range(len(side_scores)):
+            tmp = cross_entropy2d(side_scores[i], target, size_average=self.size_average) # todo average or not?
             loss += tmp
-        return loss    
-            
-#        for i in range(len(score)):
-#            loss[i], grad[i] = bce_loss(output[i], lb.numpy())
-#        torch.autograd.backward(output, grad)
-#        print( "batch-idx=%d, loss = %.4f"%(batch_idx, np.array(loss).sum()) )
+        tmp = cross_entropy2d(fuse_score, target, size_average=self.size_average)     
+        loss += tmp
+
+        loss /= len(target) 
+        if np.isnan(float(loss.data[0])):
+            raise ValueError('loss is nan while training')
+                       
+        loss.backward()
+        self.optim.step()
+     
+        return fuse_score 
+
