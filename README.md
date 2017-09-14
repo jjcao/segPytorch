@@ -23,10 +23,15 @@ Pspnet, not tested
 
 
 # One-line installation
-`git clone https://github.com/jjcao/segPytorch.git`
-`cd segPytorch`
-`conda install pytorch torchvision cuda80 -c soumith`
-`pip install -r requirements.txt`
+```bash
+git clone https://github.com/jjcao/segPytorch.git
+
+cd segPytorch
+
+conda install pytorch torchvision cuda80 -c soumith
+
+pip install -r requirements.txt
+```
 
 # Reference code
 1. https://github.com/meetshah1995/pytorch-semseg
