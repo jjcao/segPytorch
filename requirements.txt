@@ -3,4 +3,5 @@ scipy
 torchvision>=0.1.8
 matplotlib
 tqdm
+PyYAML
 visdom1
