@@ -80,6 +80,8 @@ def train(args):
     torch.manual_seed(1337)
     if cuda:
         torch.cuda.manual_seed(1337)
+        print("cuda devices: {} are ready".format(args['gpu']))
+        
         
     log_dir = get_log_dir(args['model'], cfg)
     
@@ -110,7 +112,7 @@ def train(args):
     kwargs = {'num_workers': num_workers, 'pin_memory': True} if cuda else {'num_workers': num_workers}  
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, 
                                                shuffle=True, **kwargs)
-    dataset = Dataset(dataset_dir=dataset_dir, split='train', transform=data_transform)
+    dataset = Dataset(dataset_dir=dataset_dir, split='val', transform=data_transform)
     val_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
                                              shuffle=False, **kwargs)
     if __debug__:
