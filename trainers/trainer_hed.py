@@ -22,6 +22,7 @@ class TrainerHed(Trainer):
                  size_average, interval_validate)
       
     def optimize(self, data, target):
+        import pdb; pdb.set_trace()
         self.optim.zero_grad()
         fuse_score, side_scores = self.model(data)
         
@@ -39,5 +40,5 @@ class TrainerHed(Trainer):
         loss.backward()
         self.optim.step()
      
-        return fuse_score 
+        return fuse_score, loss
 

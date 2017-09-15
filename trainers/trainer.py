@@ -186,7 +186,7 @@ class Trainer(object):
         loss.backward()
         self.optim.step()
      
-        return score
+        return score, loss
     
     def train_epoch(self):       
         self.model.train()#Sets the module in train mode.
@@ -219,7 +219,7 @@ class Trainer(object):
             
             
             # optimize
-            score = self.optimize(data, target)
+            score, loss = self.optimize(data, target)
 
             # logging
             metrics = []

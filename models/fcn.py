@@ -28,7 +28,7 @@ def make_layers_vgg16(cfg, n_classes):
     in_channels = 3
     kernel_size = 3
     padding = 100
-    conv_blocks = []
+    conv_blocks = nn.ModuleList()
     #classifier = []
     for i in range(len(cfg)): 
         block = cfg[i]
@@ -43,7 +43,7 @@ def make_layers_vgg16(cfg, n_classes):
                         nn.Dropout2d(),
                         nn.Conv2d(4096, n_classes, 1),) # score 
         else: # for conv block 1, ..., 5 
-            layers = []
+            layers = nn.ModuleList()
             for och in block: # och for output_channels
                 layers += [nn.Conv2d(in_channels, och, kernel_size, padding = padding)]
                 layers += [nn.ReLU(inplace=True)]
