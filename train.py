@@ -14,14 +14,12 @@ import configparser
 
 import os
 import os.path as osp
-import datetime
-import pytz
-import yaml
 
 import torch
 
 from datasets import get_dataset
 from datasets import transforms
+import utils.log as log
 
 import ast
 
@@ -40,26 +38,6 @@ def read_cfg(cfg_dir):
         
     cfg = dict( zip(cfg.keys(), val) ) 
     return args, cfg
-
-def get_log_dir(model_name, cfg):
-    # load config
-    name = model_name
-    for k, v in cfg.items():
-        v = str(v)
-        if '/' in v:
-            continue
-        name += '_%s-%s' % (k.upper(), v)
-    now = datetime.datetime.now(pytz.timezone('Asia/Shanghai'))
-    # name += '_VCS-%s' % git_hash() # git_hash() need install command line tool or x-code?
-    name += '_TIME-%s' % now.strftime('%Y%m%d-%H%M%S')
-    # create out
-    here = osp.dirname(osp.abspath(__file__))
-    log_dir = osp.join(here, 'logs', name)
-    if not osp.exists(log_dir):
-        os.makedirs(log_dir)
-    with open(osp.join(log_dir, 'config.yaml'), 'w') as f:
-        yaml.safe_dump(cfg, f, default_flow_style=False)
-    return log_dir
 
 def get_optimizer(name):
     return {
@@ -82,28 +60,28 @@ def train(args):
         torch.cuda.manual_seed(1337)
         print("cuda devices: {} are ready".format(args['gpu']))
         
-        
-    log_dir = get_log_dir(args['model'], cfg)
+    here = osp.dirname(osp.abspath(__file__))    
+    log_dir = log.get_log_dir(here, args['model'], cfg)
     
     
     ##########################################
     # 1. dataset and dataloader    
     ##########################################
     dataset_dir = args['dataset_dir']
-    Dataset = get_dataset(args['dataset'])
+    TrainDataset = get_dataset(args['dataset_train'])
     
     if 'im_rows' in args:
         data_transform = transforms.Compose(
-                [transforms.Normalize(Dataset.mean_bgr), 
+                [transforms.Normalize(TrainDataset.mean_bgr), 
                  transforms.Rescale( ( int(args['im_rows']), int(args['im_cols']) ) ),
                  transforms.ToTensor() ]) 
     else:     
         data_transform = transforms.Compose(
-                [transforms.Normalize(Dataset.mean_bgr), 
+                [transforms.Normalize(TrainDataset.mean_bgr), 
                 transforms.ToTensor() ]) # used by FCN   
 
     
-    dataset = Dataset(dataset_dir=dataset_dir, split='train', transform=data_transform) 
+    dataset = TrainDataset(root=dataset_dir, transform=data_transform) 
     
     batch_size = int(args['batch_size'])
     num_workers = int(args['num_workers'])
@@ -112,7 +90,9 @@ def train(args):
     kwargs = {'num_workers': num_workers, 'pin_memory': True} if cuda else {'num_workers': num_workers}  
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, 
                                                shuffle=True, **kwargs)
-    dataset = Dataset(dataset_dir=dataset_dir, split='val', transform=data_transform)
+    
+    ValDataset = get_dataset(args['dataset_val'])
+    dataset = ValDataset(root=dataset_dir, transform=data_transform)
     val_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
                                              shuffle=False, **kwargs)
     if __debug__:
@@ -133,7 +113,7 @@ def train(args):
         checkpoint = torch.load(args['checkpoint_dir'])
         
     model, start_epoch, start_iteration = get_model(args['model'], 
-                                                    len(Dataset.class_names),
+                                                    len(TrainDataset.class_names),
                                                     checkpoint, args)
     if cuda:
         model = model.cuda()        
@@ -175,14 +155,17 @@ def train(args):
         
     trainer.epoch = start_epoch
     trainer.iteration = start_iteration
-    trainer.train()
+    log_step = 1
+    if ('log_step' in args):
+        log_step = args['log_step']
+    trainer.train(log_step)
 
         
 if __name__ == '__main__':
     #torch.set_num_threads(1)
     
     parser = argparse.ArgumentParser(description='Hyperparams')    
-    parser.add_argument('-c', '--config', type=str, default='config_hed.ini') 
+    parser.add_argument('-c', '--config', type=str, default='config_fcn32s.ini') 
     args = parser.parse_args()
     
     train(args)

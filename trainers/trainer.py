@@ -188,7 +188,7 @@ class Trainer(object):
      
         return score, loss
     
-    def train_epoch(self):       
+    def train_epoch(self, log_step):       
         self.model.train()#Sets the module in train mode.
 
         n_class = len(self.train_loader.dataset.class_names)
@@ -222,29 +222,30 @@ class Trainer(object):
             score, loss = self.optimize(data, target)
 
             # logging
-            metrics = []
-            lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
-            lbl_true = target.data.cpu().numpy()
-            for lt, lp in zip(lbl_true, lbl_pred):
-                acc, acc_cls, mean_iu, fwavacc = utils.label_accuracy_score(
-                        [lt], [lp], n_class=n_class)
-                metrics.append((acc, acc_cls, mean_iu, fwavacc))
-            metrics = np.mean(metrics, axis=0)
-
-            with open(osp.join(self.out, 'log.csv'), 'a') as f:
-                elapsed_time = (
-                    datetime.datetime.now(pytz.timezone('Asia/Shanghai')) -
-                    self.timestamp_start).total_seconds()
-                log = [self.epoch, self.iter] + [loss.data[0]] + \
-                    metrics.tolist() + [''] * 5 + [elapsed_time]
-                log = map(str, log)
-                f.write(','.join(log) + '\n')
+            if self.iter % log_step == 0:
+                metrics = []
+                lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
+                lbl_true = target.data.cpu().numpy()
+                for lt, lp in zip(lbl_true, lbl_pred):
+                    acc, acc_cls, mean_iu, fwavacc = utils.label_accuracy_score(
+                            [lt], [lp], n_class=n_class)
+                    metrics.append((acc, acc_cls, mean_iu, fwavacc))
+                metrics = np.mean(metrics, axis=0)
+    
+                with open(osp.join(self.out, 'log.csv'), 'a') as f:
+                    elapsed_time = (
+                        datetime.datetime.now(pytz.timezone('Asia/Shanghai')) -
+                        self.timestamp_start).total_seconds()
+                    log = [self.epoch, self.iter] + [loss.data[0]] + \
+                        metrics.tolist() + [''] * 5 + [elapsed_time]
+                    log = map(str, log)
+                    f.write(','.join(log) + '\n')
 
             if self.iter >= self.max_iter:
                 break
     
 
-    def train(self):
+    def train(self, log_step=1):
         #len(self.train_loader) = |images|/batch_size
         max_epoch = int(math.ceil(1. * self.max_iter / len(self.train_loader)))
         for epoch in tqdm.trange(self.epoch, max_epoch, desc='Train', ncols=80):
@@ -254,6 +255,6 @@ class Trainer(object):
                 for param_group in self.optim.param_groups:
                     param_group['lr'] = self.l_rate
 
-            self.train_epoch()
+            self.train_epoch(log_step)
             if self.iter >= self.max_iter:
                 break
