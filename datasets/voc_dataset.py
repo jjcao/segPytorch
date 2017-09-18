@@ -11,7 +11,7 @@ from __future__ import print_function, division
 import os.path as osp
 import collections
 import numpy as np
-import scipy
+from scipy import io
 import PIL.Image
 from torch.utils.data import Dataset
 
@@ -177,7 +177,7 @@ class SBDClassSeg(VocDatasetBase):
         im = np.array(im, dtype=np.uint8)
         # load label
         lbl_file = data_file['lbl']
-        mat = scipy.io.loadmat(lbl_file)
+        mat = io.loadmat(lbl_file)
         lbl = mat['GTcls'][0]['Segmentation'][0].astype(np.int32)
         lbl[lbl == 255] = -1
         
