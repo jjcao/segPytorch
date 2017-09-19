@@ -24,13 +24,17 @@ Pspnet, not tested
 
 # One-line installation
 ```bash
-git clone https://github.com/jjcao/segPytorch.git
+1. git clone https://github.com/jjcao/segPytorch.git
 
-cd segPytorch
+2. cd segPytorch
 
+3. install pytorch 
 conda install pytorch torchvision cuda80 -c soumith
 
-pip install -r requirements.txt
+4. pip install -r requirements.txt
+
+[conda install pandas]
+[conda install seaborn]
 ```
 
 # Reference code
