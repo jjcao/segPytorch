@@ -1,3 +1,15 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Sep 19 10:35:54 2017
+
+steal from https://github.com/wkentaro/pytorch-fcn/
+
+todo: improve it
+
+@author: jjcao
+"""
+
 #!/usr/bin/env python
 
 from __future__ import division

@@ -45,9 +45,10 @@ def get_model(name, n_classes, checkpoint, args):
         else:  
             #import pdb; pdb.set_trace()
             if name in ['fcn32s', 'segnet']:
+                #import pdb; pdb.set_trace()
                 vgg16 = models.vgg16(pretrained=True)
-    #            from models.vgg import Vgg16
-    #            vgg16 = Vgg16(pretrained=True)
+                #from models.vgg import Vgg16               
+                #vgg16 = Vgg16(pretrained=True)
                 model.init_vgg16_params(vgg16)  
             elif name == 'fcn16s':
                 fcn32s = FCN32s(n_classes=n_classes)
