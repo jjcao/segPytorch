@@ -10,6 +10,13 @@ Segnet, init test is very bad
 Linknet, init testing is as same as segnet. But linknet is very fast.
 Pspnet, not tested
 
+## Accuracy
+| Model | Implementation |   epoch |   iteration | Accuracy | Accuracy Class | Mean IU | FWAV Accuracy |
+|:-----:|:--------------:|:-------:|:-----------:|:--------:|:--------------:|:-------:|:-------------:|
+|FCN32s      | [Original](https://github.com/shelhamer/fcn.berkeleyvision.org/tree/master/voc-fcn32s)       | - | -     | 90.49 | 76.48 | 63.63 | 83.47 |
+|FCN32s      | Ours                                                                                         |10 | 92000 | 90.63 | 72.36 | 63.13 | 83.36 |
+
+
 # Requirements
 * pytorch >= 0.2.0
 * python 3.6
