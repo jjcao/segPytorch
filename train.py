@@ -68,37 +68,47 @@ def train(args):
     # 1. dataset and dataloader    
     ##########################################
     dataset_dir = args['dataset_dir']
-    TrainDataset = get_dataset(args['dataset_train'])
+    Datasets = {'train': get_dataset(args['dataset_train']),
+                'val': get_dataset(args['dataset_val'])}
     
     if 'im_rows' in args:
-        data_transform = transforms.Compose(
-                [transforms.Normalize(TrainDataset.mean_bgr), 
+        data_transforms = {
+        'train': transforms.Compose(
+                [transforms.Normalize(Datasets['train'].mean_bgr), 
                  transforms.Rescale( ( int(args['im_rows']), int(args['im_cols']) ) ),
-                 transforms.ToTensor() ]) 
-    else:     
-        data_transform = transforms.Compose(
-                [transforms.Normalize(TrainDataset.mean_bgr), 
-                transforms.ToTensor() ]) # used by FCN   
+                 transforms.ToTensor() ]),
+        'val': transforms.Compose(
+                [transforms.Normalize(Datasets['train'].mean_bgr), 
+                 transforms.Rescale( ( int(args['im_rows']), int(args['im_cols']) ) ),
+                 transforms.ToTensor() ]),
+        }
+    else:  # used by FCN  
+        data_transforms = {
+        'train': transforms.Compose(
+                [transforms.Normalize(Datasets['train'].mean_bgr), 
+                transforms.ToTensor() ]),
+        'val': transforms.Compose(
+                [transforms.Normalize(Datasets['train'].mean_bgr), 
+                transforms.ToTensor() ]),
+        }
+    
+    datasets = {x: Datasets(root=dataset_dir, transform=data_transforms[x]) 
+                  for x in ['train', 'val']} 
 
-    
-    dataset = TrainDataset(root=dataset_dir, transform=data_transform) 
-    
+    shuffle = {'train': True, 'val':False}
     batch_size = int(args['batch_size'])
     num_workers = int(args['num_workers'])
     # does num_workers work if CPU?
     # kwargs = {'num_workers': cfg['num_workers'], 'pin_memory': True} if cuda else {} 
-    kwargs = {'num_workers': num_workers, 'pin_memory': True} if cuda else {'num_workers': num_workers}  
-    train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, 
-                                               shuffle=True, **kwargs)
-    
-    ValDataset = get_dataset(args['dataset_val'])
-    dataset = ValDataset(root=dataset_dir, transform=data_transform)
-    val_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
-                                             shuffle=False, **kwargs)
+    kwargs = {'num_workers': num_workers, 'pin_memory': True} if cuda else {'num_workers': num_workers}      
+    dataloders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=batch_size,
+                                             shuffle=shuffle[x], **kwargs)
+              for x in ['train', 'val']}
+
     if __debug__:
         print("batch size is {}, length of train_loader is {}".
-                                      format(batch_size, len(train_loader)))
-        im, lbl = dataset[0]
+              format(batch_size, len(dataloders['train'])))
+        im, lbl = datasets['train'][0]
         print(im.shape, lbl.shape)
 
 
@@ -113,7 +123,7 @@ def train(args):
         checkpoint = torch.load(args['checkpoint_dir'])
         
     model, start_epoch, start_iteration = get_model(args['model'], 
-                                                    len(TrainDataset.class_names),
+                                                    len(datasets['train'].class_names),
                                                     checkpoint, args)
     if cuda:
         model = model.cuda()        
@@ -144,13 +154,13 @@ def train(args):
         cuda=cuda,
         model=model,
         optimizer=optim,
-        train_loader=train_loader,
-        val_loader=val_loader,
+        train_loader=dataloders['train'],
+        val_loader=dataloders['val'],
         out=log_dir,
         max_iter=cfg['max_iter'],
         l_rate = cfg['lr'],
         l_rate_decay = cfg.get('lrd', 1.0),
-        interval_validate=cfg.get('interval_validate', len(train_loader)),
+        interval_validate=cfg.get('interval_validate', len(dataloders['train'])),
     )
         
     trainer.epoch = start_epoch
