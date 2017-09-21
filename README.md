@@ -14,7 +14,7 @@ Pspnet, not tested
 | Model | Implementation |   epoch |   iteration | Accuracy | Accuracy Class | Mean IU | FWAV Accuracy |
 |:-----:|:--------------:|:-------:|:-----------:|:--------:|:--------------:|:-------:|:-------------:|
 |FCN32s      | [Original](https://github.com/shelhamer/fcn.berkeleyvision.org/tree/master/voc-fcn32s)       | - | -     | 90.49 | 76.48 | 63.63 | 83.47 |
-|FCN32s      | Ours                                                                                         |10 | 92000 | 90.63 | 72.36 | 63.13 | 83.36 |
+|FCN32s| Ours|8 | 68000 | 90.31 | 72.36 | 62.37 | 82.83 |
 
 
 # Requirements
