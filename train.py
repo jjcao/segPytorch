@@ -8,7 +8,7 @@ Created on Thu Aug 10 15:57:43 2017
 
 @author: jjcao
 """
-#import pdb; pdb.set_trace()
+import pdb; pdb.set_trace()
 import argparse
 import configparser
 
@@ -92,7 +92,7 @@ def train(args):
                 transforms.ToTensor() ]),
         }
     
-    datasets = {x: Datasets(root=dataset_dir, transform=data_transforms[x]) 
+    datasets = {x: Datasets[x](root=dataset_dir, transform=data_transforms[x]) 
                   for x in ['train', 'val']} 
 
     shuffle = {'train': True, 'val':False}
@@ -118,7 +118,6 @@ def train(args):
     
     from models import get_model
     checkpoint = None
-    #import pdb; pdb.set_trace()
     if ('checkpoint_dir' in args) and (len(args['checkpoint_dir'])>0):
         checkpoint = torch.load(args['checkpoint_dir'])
         
@@ -127,9 +126,6 @@ def train(args):
                                                     checkpoint, args)
     if cuda:
         model = model.cuda()        
-#    if __debug__:
-#        print("Model: {}. Training begin at {}".format(args.resume))
-#    return 
 
 
     ##########################################

@@ -75,8 +75,8 @@ def main():
     if cuda:
         model = model.cuda()
   
-    print('==> Loading %s model file: %s' %
-          (model.__class__.__name__, model_file))
+    print('==> Loading %s model file: %s, at iteration: %d' % 
+          (model.__class__.__name__, model_file, start_iteration)) 
     
     model.eval()
 
