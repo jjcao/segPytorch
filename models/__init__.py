@@ -45,10 +45,12 @@ def get_model(name, n_classes, checkpoint, args):
         else:  
             #import pdb; pdb.set_trace()
             if name in ['fcn32s', 'segnet']:
-                #import pdb; pdb.set_trace()
-                vgg16 = models.vgg16(pretrained=True)
-                #from models.vgg import Vgg16               
-                #vgg16 = Vgg16(pretrained=True)
+                # the vgg16 pretrained model (vgg16-397923af.pth) provided by pytorch is far weak than 
+                # vgg16_from_caffe.pth provided by https://github.com/wkentaro/pytorch-fcn
+                #vgg16 = models.vgg16(pretrained=True)
+                
+                from models.vgg import Vgg16               
+                vgg16 = Vgg16(pretrained=True)
                 model.init_vgg16_params(vgg16)  
             elif name == 'fcn16s':
                 fcn32s = FCN32s(n_classes=n_classes)
