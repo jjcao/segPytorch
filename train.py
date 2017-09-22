@@ -8,7 +8,7 @@ Created on Thu Aug 10 15:57:43 2017
 
 @author: jjcao
 """
-import pdb; pdb.set_trace()
+#import pdb; pdb.set_trace()
 import argparse
 import configparser
 
@@ -54,7 +54,7 @@ def train(args):
     args, cfg = read_cfg(args.config)
         
     os.environ['CUDA_VISIBLE_DEVICES'] = args['gpu']
-    cuda = torch.cuda.is_available();
+    cuda = torch.cuda.is_available()
     torch.manual_seed(1337)
     if cuda:
         torch.cuda.manual_seed(1337)
@@ -119,7 +119,10 @@ def train(args):
     from models import get_model
     checkpoint = None
     if ('checkpoint_dir' in args) and (len(args['checkpoint_dir'])>0):
-        checkpoint = torch.load(args['checkpoint_dir'])
+        if cuda:
+            checkpoint = torch.load(args['checkpoint_dir']) 
+        else:
+            checkpoint = torch.load(args['checkpoint_dir'], map_location=lambda storage, loc: storage)
         
     model, start_epoch, start_iteration = get_model(args['model'], 
                                                     len(datasets['train'].class_names),
@@ -171,7 +174,7 @@ if __name__ == '__main__':
     #torch.set_num_threads(1)
     
     parser = argparse.ArgumentParser(description='Hyperparams')    
-    parser.add_argument('-c', '--config', type=str, default='config_fcn32s.ini') 
+    parser.add_argument('-c', '--config', type=str, default='config_fcn16s.ini') 
     args = parser.parse_args()
     
     train(args)

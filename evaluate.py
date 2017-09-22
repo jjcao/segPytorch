@@ -9,7 +9,7 @@ steal lots from https://github.com/wkentaro/pytorch-fcn/
 """
 
 #!/usr/bin/env python
-
+import pdb; pdb.set_trace()
 import argparse
 import os
 import os.path as osp
@@ -26,8 +26,8 @@ from utils import utils
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--model', help='Model path', default='logs/fcn32s_model_best.pth.tar')
-    parser.add_argument('-d', '--data', type=str, default='/Users/jjcao/Documents/jjcao_data/')
+    parser.add_argument('-m', '--model', help='Model path', default='/Users/jjcao/Documents/output/fcn32s_model_best.pth.tar')
+    parser.add_argument('-d', '--data', type=str, default='/Users/jjcao/Documents/data/')#/Users/jjcao/Documents/data/
     parser.add_argument('-g', '--gpu', type=int, default=-1)
     args = parser.parse_args()
 
@@ -68,7 +68,11 @@ def main():
         raise ValueError
         
     from models import get_model    
-    checkpoint = torch.load(model_file)    
+    if cuda:
+        checkpoint = torch.load(model_file) 
+    else:
+        checkpoint = torch.load(model_file, map_location=lambda storage, loc: storage)
+        
     model, start_epoch, start_iteration = get_model(model_type, n_class, checkpoint, args)
 
     

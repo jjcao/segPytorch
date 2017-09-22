@@ -184,7 +184,7 @@ class FCN8s(FCN):
         
         return out
     
-    def copy_params_from_fcn16s(self, fcn16s):
+    def init_fcn16s_params(self, fcn16s):
         for name, l1 in fcn16s.named_children():
             try:
                 l2 = getattr(self, name)

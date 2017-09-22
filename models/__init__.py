@@ -37,8 +37,12 @@ def get_model(name, n_classes, checkpoint, args):
     start_iteration = 0
     
     if name in model_dict.keys():
-        model = model(n_classes=n_classes)  
+        model = model(n_classes=n_classes)
+        
         if checkpoint:
+#            if torch.cuda.is_available():
+#                model = torch.nn.DataParallel(model).cuda()
+            
             model.load_state_dict(checkpoint['model_state_dict'])
             start_epoch = checkpoint['epoch']
             start_iteration = checkpoint['iteration']
@@ -54,12 +58,24 @@ def get_model(name, n_classes, checkpoint, args):
                 model.init_vgg16_params(vgg16)  
             elif name == 'fcn16s':
                 fcn32s = FCN32s(n_classes=n_classes)
-                fcn32s.load_state_dict(torch.load(args['fcn32s_pretrained_model']))
-                model.copy_params_from_fcn32s(fcn32s)
-                model.init_vgg16_params(vgg16)
+                
+                if torch.cuda.is_available():
+                    base = torch.load(args['fcn32s_pretrained_model']) 
+                else:
+                    base = torch.load(args['fcn32s_pretrained_model'], 
+                                      map_location=lambda storage, loc: storage)
+        
+                fcn32s.load_state_dict(base['model_state_dict'])
+                model.init_fcn32s_params(fcn32s)
             elif name == 'fcn8s':
-                fcn16s = FCN32s(n_classes=n_classes)
-                fcn16s.load_state_dict(torch.load(args['fcn16s_pretrained_model']))
+                fcn16s = FCN16s(n_classes=n_classes)
+                
+                if torch.cuda.is_available():
+                    base = torch.load(args['fcn32s_pretrained_model']) 
+                else:
+                    base = torch.load(args['fcn32s_pretrained_model'], 
+                                      map_location=lambda storage, loc: storage)
+                fcn16s.load_state_dict(base['model_state_dict'])    
                 model.copy_params_from_fcn16s(fcn16s)
             else:
                 return model, start_epoch, start_iteration
