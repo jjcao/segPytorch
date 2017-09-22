@@ -3,7 +3,9 @@
 """
 based on pytorch-semseg and pytorch-fcn
 
-@ todo: test staged training
+we use upsample_bilinear instead of nn.ConvTranspose2d. 
+The performace is a 1% worse then using nn.ConvTranspose2d.
+
 @ todo: We experiment with both staged training and all-at-once training.
 Created on Thu Aug 17 00:22:19 2017
 
@@ -35,13 +37,13 @@ def make_layers_vgg16(cfg, n_classes):
         if i == len(cfg)-1: # for classifier block
             # fc6 + fc7 + fc8
             classifier= nn.Sequential(
-                        nn.Conv2d(512, 4096, 7),
+                        nn.Conv2d(in_channels, block[0], 7),
                         nn.ReLU(inplace=True),
                         nn.Dropout2d(),
-                        nn.Conv2d(4096, 4096, 1),
+                        nn.Conv2d(block[0], block[1], 1),
                         nn.ReLU(inplace=True),
                         nn.Dropout2d(),
-                        nn.Conv2d(4096, n_classes, 1),) # score 
+                        nn.Conv2d(block[1], n_classes, 1),) # score 
         else: # for conv block 1, ..., 5 
             layers = nn.ModuleList()
             for och in block: # och for output_channels
@@ -145,19 +147,29 @@ class FCN16s(FCN):
         return out   
     
     def init_fcn32s_params(self, fcn32s):
-        for name, l1 in fcn32s.named_children():
+        for block1, block2 in zip(fcn32s.conv_blocks, self.conv_blocks):
+            for l1, l2 in zip(block1, block2):
+                try:
+                    l2.weight  # skip ReLU / Dropout
+                except Exception:
+                    continue  
+                
+                assert l1.weight.size() == l2.weight.size()
+                assert l1.bias.size() == l2.bias.size()
+                l2.weight.data.copy_(l1.weight.data)
+                l2.bias.data.copy_(l1.bias.data)                                     
+
+        for l1, l2 in zip(fcn32s.classifier, self.classifier):
             try:
-                l2 = getattr(self, name)
                 l2.weight  # skip ReLU / Dropout
             except Exception:
-                continue
+                continue  
+            
             assert l1.weight.size() == l2.weight.size()
             assert l1.bias.size() == l2.bias.size()
             l2.weight.data.copy_(l1.weight.data)
             l2.bias.data.copy_(l1.bias.data)
-#        for param in model.parameters():
-#            print(type(param.data), param.size())
-
+            
 # FCN8s
 class FCN8s(FCN):
     def __init__(self, n_classes=21, learned_billinear=False):
@@ -185,14 +197,25 @@ class FCN8s(FCN):
         return out
     
     def init_fcn16s_params(self, fcn16s):
-        for name, l1 in fcn16s.named_children():
+        for block1, block2 in zip(fcn16s.conv_blocks, self.conv_blocks):
+            for l1, l2 in zip(block1, block2):
+                try:
+                    l2.weight  # skip ReLU / Dropout
+                except Exception:
+                    continue  
+                
+                assert l1.weight.size() == l2.weight.size()
+                assert l1.bias.size() == l2.bias.size()
+                l2.weight.data.copy_(l1.weight.data)
+                l2.bias.data.copy_(l1.bias.data)                                     
+
+        for l1, l2 in zip(fcn16s.classifier, self.classifier):
             try:
-                l2 = getattr(self, name)
                 l2.weight  # skip ReLU / Dropout
             except Exception:
-                continue
+                continue  
+            
             assert l1.weight.size() == l2.weight.size()
+            assert l1.bias.size() == l2.bias.size()
             l2.weight.data.copy_(l1.weight.data)
-            if l1.bias is not None:
-                assert l1.bias.size() == l2.bias.size()
-                l2.bias.data.copy_(l1.bias.data)
+            l2.bias.data.copy_(l1.bias.data)

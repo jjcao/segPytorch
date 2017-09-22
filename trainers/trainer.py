@@ -95,49 +95,108 @@ class Trainer(object):
         self.l_rate_decay = l_rate_decay
         self.lrDecayEvery = lrDecayEvery
         self.best_mean_iu = 0    
-                
-    def validate(self):
-        #Sets the module in evaluation mode.
-        #This has any effect only on modules such as Dropout or BatchNorm.
-        self.model.eval()
- 
-        n_class = len(self.val_loader.dataset.class_names)
+                   
+    
+    def optimize(self, data, target):
+        self.optim.zero_grad()
+        score = self.model(data)
+        
+        loss = cross_entropy2d(score, target, size_average=self.size_average) # todo average or not?
+        loss /= len(target) 
+        if np.isnan(float(loss.data[0])):
+            raise ValueError('loss is nan while training')
+                       
+        loss.backward()
+        self.optim.step()
+     
+        return score, loss
+    
+    def log_csv(self, score, target, loss, n_class, log_step=1):
+        # logging
+        if self.iter % log_step == 0:
+            metrics = []
+            lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
+            lbl_true = target.data.cpu().numpy()
+            for lt, lp in zip(lbl_true, lbl_pred):
+                acc, acc_cls, mean_iu, fwavacc = utils.label_accuracy_score(
+                        [lt], [lp], n_class=n_class)
+                metrics.append((acc, acc_cls, mean_iu, fwavacc))
+            metrics = np.mean(metrics, axis=0)
 
-        val_loss = 0
-        visualizations = []
-        label_trues, label_preds = [], []
+            with open(osp.join(self.out, 'log.csv'), 'a') as f:
+                elapsed_time = (
+                    datetime.datetime.now(pytz.timezone('Asia/Shanghai')) -
+                    self.timestamp_start).total_seconds()
+                log = [self.epoch, self.iter] + [loss.data[0]] + \
+                    metrics.tolist() + [''] * 5 + [elapsed_time]
+                log = map(str, log)
+                f.write(','.join(log) + '\n')
+                        
+    def do(self, btrain, data_loader, log_step):
+        self.model.train(btrain)  # Set model to training mode if btrain==True; else to evaluate mode
+        n_class = len(data_loader.dataset.class_names)
+
+        if btrain==False:
+            val_loss = 0
+            visualizations = []
+            label_trues, label_preds = [], []
+        
         for batch_idx, (data, target) in tqdm.tqdm(
-                enumerate(self.val_loader), total=len(self.val_loader),
-                desc='Valid iteration=%d' % self.iter, ncols=80,
-                leave=False):
-            
+                enumerate(data_loader), total=len(data_loader),
+                desc='Train epoch=%d' % self.epoch, ncols=80, leave=False):
+           
+            # for resuming
+            if btrain:
+                iter = batch_idx + self.epoch * len(data_loader)
+                if self.iter != 0 and (iter - 1) != self.iter:
+                    continue  
+                self.iter = iter
+
+            # data preprocessing
             if torch.cuda.is_available():
                 data, target = data.cuda(), target.cuda()
-            data, target = Variable(data, volatile=True), Variable(target)
-            score = self.model(data)
-
-            loss = cross_entropy2d(score, target, size_average=self.size_average)
-            if np.isnan(float(loss.data[0])):
-                raise ValueError('loss is nan while validating')
-            val_loss += float(loss.data[0]) / len(data)
-
-
-            imgs = data.data.cpu()
-            lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
-            lbl_true = target.data.cpu()
-            transform = transforms.Compose(
-                    [transforms.FromTensor(), 
-                     transforms.UnNormalize(self.val_loader.dataset.mean_bgr)])
-            for img, lt, lp in zip(imgs, lbl_true, lbl_pred):
-                img, lt = transform(img, lt)
-                #img, lt = self.val_loader.dataset.untransform(img, lt)
-                label_trues.append(lt)
-                label_preds.append(lp)
-                if len(visualizations) < 9:
-                    viz = utils.visualize_segmentation(
-                        lbl_pred=lp, lbl_true=lt, img=img, n_class=n_class)
-                    visualizations.append(viz)
-                    
+            data, target = Variable(data), Variable(target)
+            
+            # this is not in standard FCN
+            #poly_lr_scheduler(self.optim, self.base_l_rate, iter)
+             
+            if btrain:# optimize
+                score, loss = self.optimize(data, target)  
+                self.log_csv(score, target, loss, n_class, log_step)  
+                if self.iter >= self.max_iter:
+                    break
+            else:
+                score = self.model(data)
+    
+                loss = cross_entropy2d(score, target, size_average=self.size_average)
+                if np.isnan(float(loss.data[0])):
+                    raise ValueError('loss is nan while validating')
+                val_loss += float(loss.data[0]) / len(data)
+                self.visualize(data, score, target,label_preds, label_trues, visualizations, n_class)
+        #end of for
+        
+        # for outputing in validation
+        if btrain==False:    
+            self.output(val_loss, visualizations, label_preds, label_trues, n_class)
+            
+    def visualize(self, data, score, target, label_preds, label_trues, visualizations,n_class):
+        imgs = data.data.cpu()
+        lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
+        lbl_true = target.data.cpu()
+        transform = transforms.Compose(
+                [transforms.FromTensor(), 
+                 transforms.UnNormalize(self.val_loader.dataset.mean_bgr)])
+        for img, lt, lp in zip(imgs, lbl_true, lbl_pred):
+            img, lt = transform(img, lt)
+            #img, lt = self.val_loader.dataset.untransform(img, lt)
+            label_trues.append(lt)
+            label_preds.append(lp)
+            if len(visualizations) < 9:
+                viz = utils.visualize_segmentation(
+                    lbl_pred=lp, lbl_true=lt, img=img, n_class=n_class)
+                visualizations.append(viz)
+        
+    def output(self,val_loss, visualizations, label_preds, label_trues, n_class):
         metrics = utils.label_accuracy_score(label_trues, label_preds, n_class)
 
         out = osp.join(self.out, 'visualization_viz')
@@ -171,83 +230,13 @@ class Trainer(object):
         }, osp.join(self.out, 'checkpoint.pth.tar'))
         if is_best:
             shutil.copy(osp.join(self.out, 'checkpoint.pth.tar'),
-                        osp.join(self.out, 'model_best.pth.tar'))       
-
-    
-    def optimize(self, data, target):
-        self.optim.zero_grad()
-        score = self.model(data)
-        
-        loss = cross_entropy2d(score, target, size_average=self.size_average) # todo average or not?
-        loss /= len(target) 
-        if np.isnan(float(loss.data[0])):
-            raise ValueError('loss is nan while training')
-                       
-        loss.backward()
-        self.optim.step()
-     
-        return score, loss
-    
-    def train_epoch(self, log_step):       
-        self.model.train()#Sets the module in train mode.
-
-        n_class = len(self.train_loader.dataset.class_names)
-
-        for batch_idx, (data, target) in tqdm.tqdm(
-                enumerate(self.train_loader), total=len(self.train_loader),
-                desc='Train epoch=%d' % self.epoch, ncols=80, leave=False):
-            #import pdb; pdb.set_trace()
-            # for resuming
-            iter = batch_idx + self.epoch * len(self.train_loader)
-            if self.iter != 0 and (iter - 1) != self.iter:
-                continue  
-            self.iter = iter
-
-            # for validate
-            if self.iter % self.interval_validate == 0:
-#                print(self.iter, self.interval_validate)
-#                print(data.shape)
-                self.validate()
-            
-            # data preprocessing
-            if torch.cuda.is_available():
-                data, target = data.cuda(), target.cuda()
-            data, target = Variable(data), Variable(target)
-            
-            # this is not in standard FCN
-            #poly_lr_scheduler(self.optim, self.base_l_rate, iter)
-            
-            
-            # optimize
-            score, loss = self.optimize(data, target)
-
-            # logging
-            if self.iter % log_step == 0:
-                metrics = []
-                lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
-                lbl_true = target.data.cpu().numpy()
-                for lt, lp in zip(lbl_true, lbl_pred):
-                    acc, acc_cls, mean_iu, fwavacc = utils.label_accuracy_score(
-                            [lt], [lp], n_class=n_class)
-                    metrics.append((acc, acc_cls, mean_iu, fwavacc))
-                metrics = np.mean(metrics, axis=0)
-    
-                with open(osp.join(self.out, 'log.csv'), 'a') as f:
-                    elapsed_time = (
-                        datetime.datetime.now(pytz.timezone('Asia/Shanghai')) -
-                        self.timestamp_start).total_seconds()
-                    log = [self.epoch, self.iter] + [loss.data[0]] + \
-                        metrics.tolist() + [''] * 5 + [elapsed_time]
-                    log = map(str, log)
-                    f.write(','.join(log) + '\n')
-
-            if self.iter >= self.max_iter:
-                break
+                        osp.join(self.out, 'model_best.pth.tar')) 
     
 
     def train(self, log_step=1):
         #len(self.train_loader) = |images|/batch_size
         max_epoch = int(math.ceil(1. * self.max_iter / len(self.train_loader)))
+        
         for epoch in tqdm.trange(self.epoch, max_epoch, desc='Train', ncols=80):
             self.epoch = epoch
             if epoch % self.lrDecayEvery == 0:
@@ -255,6 +244,10 @@ class Trainer(object):
                 for param_group in self.optim.param_groups:
                     param_group['lr'] = self.l_rate
 
-            self.train_epoch(log_step)
+            if self.iter % self.interval_validate == 0:
+                self.do(False, self.val_loader, log_step)
+            
+            self.do(True, self.train_loader, log_step)
+            
             if self.iter >= self.max_iter:
                 break
