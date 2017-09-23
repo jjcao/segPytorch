@@ -72,11 +72,24 @@ class FCN(nn.Module):
             raise NotImplementedError
             # upscore = nn.ConvTranspose2d(self.n_classes, self.n_classes, 64, stride=32, bias=False)
             # upscore.scale_factor = None
-            
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                m.weight.data.zero_()
+                if m.bias is not None:
+                    m.bias.data.zero_()
+#            if isinstance(m, nn.ConvTranspose2d):
+#                assert m.kernel_size[0] == m.kernel_size[1]
+#                initial_weight = get_upsampling_weight(
+#                    m.in_channels, m.out_channels, m.kernel_size[0])
+#                m.weight.data.copy_(initial_weight)    
+        
 # FCN32s
 class FCN32s(FCN):
     def __init__(self, n_classes=21, learned_billinear=False):
         super(FCN32s, self).__init__(n_classes, learned_billinear)
+        self._initialize_weights()
 
     def forward(self, x):
         input = x
@@ -129,6 +142,7 @@ class FCN16s(FCN):
     def __init__(self, n_classes=21, learned_billinear=False):
         super(FCN16s, self).__init__(n_classes, learned_billinear)
         self.score_pool4 = nn.Conv2d(512, self.n_classes, 1)
+        self._initialize_weights()
 
     def forward(self, x):
         conv1 = self.conv_blocks[0](x)
@@ -142,7 +156,7 @@ class FCN16s(FCN):
 
         score = F.upsample_bilinear(score, score_pool4.size()[2:])
         score += score_pool4
-        out = F.upsample_bilinear(score, x.size()[2:])
+        out = F.upsample_bilinear(score, x.size()[2:])#.contiguous()
         
         return out   
     
@@ -154,8 +168,8 @@ class FCN16s(FCN):
                 except Exception:
                     continue  
                 
-                assert l1.weight.size() == l2.weight.size()
-                assert l1.bias.size() == l2.bias.size()
+                assert l2.weight.size() == l1.weight.size()
+                assert l2.bias.size() == l1.bias.size()
                 l2.weight.data.copy_(l1.weight.data)
                 l2.bias.data.copy_(l1.bias.data)                                     
 
@@ -165,8 +179,8 @@ class FCN16s(FCN):
             except Exception:
                 continue  
             
-            assert l1.weight.size() == l2.weight.size()
-            assert l1.bias.size() == l2.bias.size()
+            assert l2.weight.size() == l1.weight.size()
+            assert l2.bias.size() == l1.bias.size()
             l2.weight.data.copy_(l1.weight.data)
             l2.bias.data.copy_(l1.bias.data)
             
@@ -176,6 +190,7 @@ class FCN8s(FCN):
         super(FCN8s, self).__init__(n_classes, learned_billinear)
         self.score_pool4 = nn.Conv2d(512, self.n_classes, 1)
         self.score_pool3 = nn.Conv2d(256, self.n_classes, 1)
+        self._initialize_weights()
 
     def forward(self, x):
         conv1 = self.conv_blocks[0](x)

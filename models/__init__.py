@@ -11,7 +11,6 @@ todo office choice between vgg16 and resnet-101, etc
 
 import torch
 
-import torchvision.models as models
 from models.fcn import FCN32s, FCN16s, FCN8s
 from models.segnet import Segnet
 from models.unet import Unet
@@ -37,7 +36,7 @@ def get_model(name, n_classes, checkpoint, args):
     start_iteration = 0
     
     if name in model_dict.keys():
-        model = model(n_classes=n_classes)
+        model = model(n_classes=n_classes) 
         
         if checkpoint:
 #            if torch.cuda.is_available():
