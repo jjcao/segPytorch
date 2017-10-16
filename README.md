@@ -15,6 +15,8 @@ Pspnet, not tested
 |:-----:|:--------------:|:-------:|:-----------:|:--------:|:--------------:|:-------:|:-------------:|
 |FCN32s      | [Original](https://github.com/shelhamer/fcn.berkeleyvision.org/tree/master/voc-fcn32s)       | - | -     | 90.49 | 76.48 | 63.63 | 83.47 |
 |FCN32s| Ours|8 | 68000 | 90.31 | 72.36 | 62.37 | 82.83 |
+|FCN16s      | [Original](https://github.com/shelhamer/fcn.berkeleyvision.org/tree/master/voc-fcn16s)       | - | -     | 91.00 | 78.07 | 65.01 | 84.27 |
+|FCN16s| Ours|2 | 18000 | 90.30| 74.46 | 62.72 | 82.95 |
 
 
 # Requirements
