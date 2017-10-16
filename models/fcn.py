@@ -14,6 +14,8 @@ Created on Thu Aug 17 00:22:19 2017
 
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
+import torch
 
 cfg = {
     'vgg16': [[64, 64],         #conv_block1
@@ -57,6 +59,22 @@ def make_layers_vgg16(cfg, n_classes):
                 
     return conv_blocks, classifier
 
+# https://github.com/shelhamer/fcn.berkeleyvision.org/blob/master/surgery.py
+def get_upsampling_weight(in_channels, out_channels, kernel_size):
+    """Make a 2D bilinear kernel suitable for upsampling"""
+    factor = (kernel_size + 1) // 2
+    if kernel_size % 2 == 1:
+        center = factor - 1
+    else:
+        center = factor - 0.5
+    og = np.ogrid[:kernel_size, :kernel_size]
+    filt = (1 - abs(og[0] - center) / factor) * \
+           (1 - abs(og[1] - center) / factor)
+    weight = np.zeros((in_channels, out_channels, kernel_size, kernel_size),
+                      dtype=np.float64)
+    weight[range(in_channels), range(out_channels), :, :] = filt
+    return torch.from_numpy(weight).float()
+
 # FCN
 class FCN(nn.Module):
 
@@ -67,28 +85,27 @@ class FCN(nn.Module):
         
         self.conv_blocks, self.classifier = make_layers_vgg16(cfg['vgg16'], self.n_classes)  
 
-        # TODO: Add support for learned upsampling
-        if self.learned_billinear:
-            raise NotImplementedError
-            # upscore = nn.ConvTranspose2d(self.n_classes, self.n_classes, 64, stride=32, bias=False)
-            # upscore.scale_factor = None
-
+        
     def _initialize_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 m.weight.data.zero_()
                 if m.bias is not None:
                     m.bias.data.zero_()
-#            if isinstance(m, nn.ConvTranspose2d):
-#                assert m.kernel_size[0] == m.kernel_size[1]
-#                initial_weight = get_upsampling_weight(
-#                    m.in_channels, m.out_channels, m.kernel_size[0])
-#                m.weight.data.copy_(initial_weight)    
+            if isinstance(m, nn.ConvTranspose2d):
+                assert m.kernel_size[0] == m.kernel_size[1]
+                initial_weight = get_upsampling_weight(
+                    m.in_channels, m.out_channels, m.kernel_size[0])
+                m.weight.data.copy_(initial_weight)    
         
 # FCN32s
 class FCN32s(FCN):
     def __init__(self, n_classes=21, learned_billinear=False):
         super(FCN32s, self).__init__(n_classes, learned_billinear)
+
+        if self.learned_billinear:            
+            self.upscore = nn.ConvTranspose2d(self.n_classes, self.n_classes, 64, stride=32, bias=False)
+        
         self._initialize_weights()
 
     def forward(self, x):
@@ -98,9 +115,15 @@ class FCN32s(FCN):
             input = out
             
         score = self.classifier(out)
-        out = F.upsample_bilinear(score, x.size()[2:])
+        if self.learned_billinear:
+            out = self.upscore(score)
+            out = out[:, :, 19:19 + x.size()[2], 19:19 + x.size()[3]].contiguous()
+        else:
+            out = F.upsample_bilinear(score, x.size()[2:])
+            
         return out 
-         
+    
+        
     def init_vgg16_params(self, vgg16, copy_fc8=False):    
         #import pdb; pdb.set_trace()
         #print(len(self.conv_blocks))      
@@ -142,6 +165,10 @@ class FCN16s(FCN):
     def __init__(self, n_classes=21, learned_billinear=False):
         super(FCN16s, self).__init__(n_classes, learned_billinear)
         self.score_pool4 = nn.Conv2d(512, self.n_classes, 1)
+        if self.learned_billinear:                    
+            self.upscore2 = nn.ConvTranspose2d(self.n_class, self.n_class, 4, stride=2, bias=False)
+            self.upscore16 = nn.ConvTranspose2d(self.n_class, self.n_class, 32, stride=16, bias=False)
+        
         self._initialize_weights()
 
     def forward(self, x):
@@ -154,12 +181,22 @@ class FCN16s(FCN):
         score = self.classifier(conv5)
         score_pool4 = self.score_pool4(conv4)
 
-        score = F.upsample_bilinear(score, score_pool4.size()[2:])
-        score += score_pool4
-        out = F.upsample_bilinear(score, x.size()[2:])#.contiguous()
+        if self.learned_billinear: 
+            upscore2 = self.upscore2(score)# 1/16 
+            
+            score_pool4 = score_pool4[:, :, 5:5 + upscore2.size()[2], 5:5 + upscore2.size()[3]]# 1/16
+            
+            upscore2 += score_pool4
+            
+            upscore16 = self.upscore16(upscore2)
+            out = upscore16[:, :, 27:27 + x.size()[2], 27:27 + x.size()[3]].contiguous()
+        else:    
+            upscore2 = F.upsample_bilinear(score, score_pool4.size()[2:])
+            upscore2 += score_pool4
+            out = F.upsample_bilinear(upscore2, x.size()[2:])#.contiguous()
         
-        return out   
-    
+        return out       
+        
     def init_fcn32s_params(self, fcn32s):
         for block1, block2 in zip(fcn32s.conv_blocks, self.conv_blocks):
             for l1, l2 in zip(block1, block2):
@@ -190,6 +227,12 @@ class FCN8s(FCN):
         super(FCN8s, self).__init__(n_classes, learned_billinear)
         self.score_pool4 = nn.Conv2d(512, self.n_classes, 1)
         self.score_pool3 = nn.Conv2d(256, self.n_classes, 1)
+        
+        if self.learned_billinear: 
+            self.upscore2 = nn.ConvTranspose2d(self.n_class, self.n_class, 4, stride=2, bias=False)
+            self.upscore8 = nn.ConvTranspose2d(self.n_class, self.n_class, 16, stride=8, bias=False)
+            self.upscore_pool4 = nn.ConvTranspose2d(self.n_class, self.n_class, 4, stride=2, bias=False)
+            
         self._initialize_weights()
 
     def forward(self, x):
@@ -203,15 +246,32 @@ class FCN8s(FCN):
         score_pool4 = self.score_pool4(conv4)
         score_pool3 = self.score_pool3(conv3)
         
-        score = F.upsample_bilinear(score, score_pool4.size()[2:])
-        score += score_pool4
-        score = F.upsample_bilinear(score, score_pool3.size()[2:])
-        score += score_pool3
-        out = F.upsample_bilinear(score, x.size()[2:])
+        if self.learned_billinear: 
+            upscore2 = self.upscore2(score)# 1/16 
+            
+            score_pool4 = score_pool4[:, :, 5:5 + upscore2.size()[2], 5:5 + upscore2.size()[3]]# 1/16
+            
+            upscore2 += score_pool4# 1/16
+            
+            upscore_pool4 =self.upscore_pool4(upscore2)# 1/8
+    
+            score_pool3 = score_pool3[:, :, 9:9 + upscore_pool4.size()[2], 9:9 + upscore_pool4.size()[3]]# 1/8
+
+            score_pool3 += upscore_pool4  # 1/8
+                      
+            upscore8 = self.upscore8(score_pool3)
+            out = upscore8[:, :, 31:31 + x.size()[2], 31:31 + x.size()[3]].contiguous() 
+        else:
+            score = F.upsample_bilinear(score, score_pool4.size()[2:])
+            score += score_pool4
+            score = F.upsample_bilinear(score, score_pool3.size()[2:])
+            score += score_pool3
+            out = F.upsample_bilinear(score, x.size()[2:])
         
         return out
     
     def init_fcn16s_params(self, fcn16s):
+        # todo copy more params from fcn16s? via for m in self.modules(): or 
         for block1, block2 in zip(fcn16s.conv_blocks, self.conv_blocks):
             for l1, l2 in zip(block1, block2):
                 try:
