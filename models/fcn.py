@@ -3,8 +3,11 @@
 """
 based on pytorch-semseg and pytorch-fcn
 
-we use upsample_bilinear instead of nn.ConvTranspose2d. 
-The performace is a 1% worse then using nn.ConvTranspose2d.
+
+
+1. Using upsample_bilinear instead of nn.ConvTranspose2d, then performace is a 1% worse then using nn.ConvTranspose2d.
+
+2. using vgg16_from_caffe.pth provided by https://github.com/wkentaro/pytorch-fcn is better than vgg16-397923af.pth by pytorch
 
 @ todo: We experiment with both staged training and all-at-once training.
 Created on Thu Aug 17 00:22:19 2017

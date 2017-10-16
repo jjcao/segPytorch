@@ -5,4 +5,5 @@ matplotlib
 tqdm
 PyYAML
 scikit-image
-visdom1
+visdom1 >= 1.0.1
+gdown
