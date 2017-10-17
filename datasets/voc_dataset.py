@@ -67,20 +67,20 @@ class VocDatasetBase(Dataset):
         self.transform = transform
         self.files = collections.defaultdict(list)
         
-        for split in ['train', 'val', 'trainval']:
-            imset_file = osp.join(
-                dataset_dir, 'ImageSets/Segmentation/%s.txt' % split)
-            for did in open(imset_file):
-                did = did.strip()
-                # input image
-                im_file = osp.join(dataset_dir, 'JPEGImages/%s.jpg' % did)
-                # label file, i.e. groundth file
-                lbl_file = osp.join(
-                    dataset_dir, 'SegmentationClassAug/%s.png' % did)
-                self.files[split].append({
-                    'im': im_file,
-                    'lbl': lbl_file,
-                })
+        #for split in ['train', 'val', 'trainval']:
+        imset_file = osp.join(
+            dataset_dir, 'ImageSets/Segmentation/%s.txt' % split)
+        for did in open(imset_file):
+            did = did.strip()
+            # input image
+            im_file = osp.join(dataset_dir, 'JPEGImages/%s.jpg' % did)
+            # label file, i.e. groundth file
+            lbl_file = osp.join(
+                dataset_dir, 'SegmentationClassAug/%s.png' % did)
+            self.files[split].append({
+                'im': im_file,
+                'lbl': lbl_file,
+            })
 
     def __len__(self):
         return len(self.files[self.split])
