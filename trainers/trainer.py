@@ -177,7 +177,7 @@ class Trainer(object):
         
         for batch_idx, (data, target) in tqdm.tqdm(
                 enumerate(data_loader), total=len(data_loader),
-                desc='Train epoch=%d' % self.epoch, ncols=80, leave=False):        
+                desc='Valid iteration=%d' % self.iteration, ncols=80, leave=False):        
 
             # data preprocessing
             if torch.cuda.is_available():
