@@ -86,11 +86,11 @@ class Trainer(object):
         log_p = F.log_softmax(input)
         # log_p: (n*h*w, c)
         log_p = log_p.transpose(1, 2).transpose(2, 3).contiguous().view(-1, c)
-        log_p = log_p[target.view(n, h, w, 1).repeat(1, 1, 1, c) >= 0] # 这一步的结果可能是空！！
+        log_p = log_p[target.view(n, h, w, 1).repeat(1, 1, 1, c) >= 0] # 这一步的结果可能是空！说明groundtruth图片不对。
         if log_p.dim()==0: # 有待记录，查明原因和处理方式， todo
-            loss = torch.FloatTensor(1).zero_()
+            loss = torch.FloatTensor(1)
             loss = torch.autograd.variable.Variable(loss)
-            self.log_csv_debug('warning: log_p>=0 is empty, image: %s' % self.name)
+            loss.data[0] = np.nan            
             return loss
         
         log_p = log_p.view(-1, c)
@@ -109,10 +109,11 @@ class Trainer(object):
         loss = self.cross_entropy2d(score, target, size_average=self.size_average) # todo average or not?
         loss /= len(target) 
         if np.isnan(float(loss.data[0])):
-            raise ValueError('loss is nan while training')
-                       
-        loss.backward()
-        self.optim.step()
+            #raise ValueError('loss is nan while training')
+            self.log_csv_debug('warning: loss is nan, may caused by log_p>=0 is empty, by wrong groundtruth image: %s' % self.name)
+        else:               
+            loss.backward()
+            self.optim.step()
      
         return score, loss
     
