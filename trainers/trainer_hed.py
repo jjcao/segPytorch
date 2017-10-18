@@ -6,7 +6,7 @@ Created on Wed Sep  6 15:06:58 2017
 @author: jjcao
 """
 
-from trainers.trainer import Trainer, cross_entropy2d
+from trainers.trainer import Trainer
 
 import numpy as np
 
@@ -28,9 +28,9 @@ class TrainerHed(Trainer):
         
         loss = []
         for i in range(len(side_scores)):
-            tmp = cross_entropy2d(side_scores[i], target, size_average=self.size_average) # todo average or not?
+            tmp = self.cross_entropy2d(side_scores[i], target, size_average=self.size_average) # todo average or not?
             loss += tmp
-        tmp = cross_entropy2d(fuse_score, target, size_average=self.size_average)     
+        tmp = self.cross_entropy2d(fuse_score, target, size_average=self.size_average)     
         loss += tmp
 
         loss /= len(target) 

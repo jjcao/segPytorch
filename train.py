@@ -108,7 +108,7 @@ def train(args):
     if __debug__:
         print("batch size is {}, length of train_loader is {}".
               format(batch_size, len(dataloders['train'])))
-        im, lbl = datasets['train'][0]
+        im, lbl, _ = datasets['train'][0]
         print(im.shape, lbl.shape)
 
 
@@ -174,7 +174,7 @@ if __name__ == '__main__':
     #torch.set_num_threads(1)
     
     parser = argparse.ArgumentParser(description='Hyperparams')    
-    parser.add_argument('-c', '--config', type=str, default='config_fcn16s.ini') 
+    parser.add_argument('-c', '--config', type=str, default='config_fcn32s_sc2.ini') 
     args = parser.parse_args()
     
     train(args)

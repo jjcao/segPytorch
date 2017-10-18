@@ -11,7 +11,7 @@ from torchvision import utils
 import numpy as np
 
 #import transforms
-from voc_dataset import VocDataset
+from voc_dataset import VocDatasetBase
 
 def show_im_label(idx, image, label, row = 4, col = 4):
     """Show image and its label, i.e. groundtruth"""

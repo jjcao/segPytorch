@@ -62,12 +62,13 @@ class SpsDatasetBase(Dataset):
             im_file = osp.join(dataset_dir, did)
             
             # label file, i.e. groundth file 
-            tmp = osp.basename(did)         
-            tmp = osp.splitext(tmp)[0]
-            lbl_file = osp.join(dataset_dir, '%s/end/%s.png' % (rpath, tmp) )
+            name = osp.basename(did)         
+            name = osp.splitext(name)[0]
+            lbl_file = osp.join(dataset_dir, '%s/end/%s.png' % (rpath, name) )
             self.files[split].append({
                 'im': im_file,
                 'lbl': lbl_file,
+                'name': name,
             })
 
     def __len__(self):
@@ -84,9 +85,9 @@ class SpsDatasetBase(Dataset):
         lbl[lbl == 1] = 0
          
         if self.transform:
-            return self.transform(im, lbl)
+            return (*(self.transform(im, lbl)), data_file['name'])
         else:   
-             return im, lbl
+             return im, lbl, data_file['name']
         #return {'image': im, 'label': lbl}
   
     def untransform(self, im, lbl):

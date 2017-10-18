@@ -14,7 +14,7 @@ from voc_dataset import VocDataset
    
 def test_basic_io(dataset_dir, im_num = 3, row = 3, col = 4):
     print('\n\ntest_basic_io')
-    voc_dataset = VocDataset(dataset_dir=dataset_dir, transform=None, split='train')           
+    voc_dataset = VocDataset(root=dataset_dir, transform=None, split='train')           
     for i, (im, lbl) in enumerate(voc_dataset):
         print(i, im.shape, lbl.shape)
         show_im_label(i, im, lbl, row+1, col)    
@@ -41,7 +41,7 @@ def test_transforms(dataset_dir, im_num = 2, row = 3, col = 4):
                         ToTensor() ])
 #    composed = None
 #    composed = Compose([ RandomCrop(224), ToTensor() ])
-    voc_dataset = VocDataset(dataset_dir=dataset_dir, split='train', transform=composed)
+    voc_dataset = VocDataset(root=dataset_dir, split='train', transform=composed)
     
 
     
@@ -71,7 +71,7 @@ def test_dataloader(dataset_dir):
                        #RandomCrop(224),                         
                        ToTensor() ])
 
-    dataset = VocDataset(dataset_dir=dataset_dir, split='train', transform=composed)    
+    dataset = VocDataset(root=dataset_dir, split='train', transform=composed)    
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=4, 
                                              shuffle=False, num_workers=4)
   
@@ -93,7 +93,7 @@ def test_dataloader(dataset_dir):
 ####      test 
 ###############################  
 if __name__ == '__main__':    
-    dataset_dir = '/Users/jjcao/Documents/jjcao_data/VOCdevkit/VOC2012/'
+    dataset_dir = '/Users/jjcao/Documents/data'
     #test_basic_io(dataset_dir, 3, 2, 4)
     #test_transforms(dataset_dir, 3, 2, 4)
     test_dataloader(dataset_dir)

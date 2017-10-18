@@ -80,6 +80,7 @@ class VocDatasetBase(Dataset):
             self.files[split].append({
                 'im': im_file,
                 'lbl': lbl_file,
+                'name': did,
             })
 
     def __len__(self):
@@ -95,9 +96,9 @@ class VocDatasetBase(Dataset):
         lbl[lbl == 255] = -1
          
         if self.transform:
-            return self.transform(im, lbl)
+            return (*(self.transform(im, lbl)), data_file['name'])
         else:   
-             return im, lbl
+             return im, lbl, data_file['name']
         #return {'image': im, 'label': lbl}
   
     def untransform(self, im, lbl):
@@ -137,7 +138,11 @@ class VOC2011ClassSeg(VocDatasetBase):
             did = did.strip()
             im_file = osp.join(dataset_dir, 'JPEGImages/%s.jpg' % did)
             lbl_file = osp.join(dataset_dir, 'SegmentationClass/%s.png' % did)
-            self.files[split].append({'im': im_file, 'lbl': lbl_file})
+            self.files[split].append({
+                    'im': im_file, 
+                    'lbl': lbl_file,
+                    'name': did,
+                    })
 
 class VOC2012ClassSeg(VocDatasetBase):
     """pascal VOC2012 dataset."""
@@ -167,6 +172,7 @@ class SBDClassSeg(VocDatasetBase):
                 self.files[split].append({
                     'im': im_file,
                     'lbl': lbl_file,
+                    'name': did,
                 })
 
     def __getitem__(self, index):
@@ -182,6 +188,6 @@ class SBDClassSeg(VocDatasetBase):
         lbl[lbl == 255] = -1
         
         if self.transform:
-            return self.transform(im, lbl)
+            return (*(self.transform(im, lbl)), data_file['name'])
         else:
-            return im, lbl
+            return im, lbl, data_file['name']

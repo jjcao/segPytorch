@@ -23,23 +23,6 @@ import numpy as np
 from utils import utils
 import scipy
 
-def cross_entropy2d(input, target, weight=None, size_average=True):
-    # input: (n, c, h, w), target: (n, h, w)
-    n, c, h, w = input.size()
-    # log_p: (n, c, h, w)
-    log_p = F.log_softmax(input)
-    # log_p: (n*h*w, c)
-    log_p = log_p.transpose(1, 2).transpose(2, 3).contiguous().view(-1, c)
-    log_p = log_p[target.view(n, h, w, 1).repeat(1, 1, 1, c) >= 0]
-    log_p = log_p.view(-1, c)
-    # target: (n*h*w,)
-    mask = target >= 0
-    target = target[mask]
-    loss = F.nll_loss(log_p, target, weight=weight, size_average=False)
-    if size_average:
-        loss /= mask.data.sum()
-    return loss
-
 class Trainer(object):
 
     def __init__(self, cuda, model, optimizer,
@@ -96,12 +79,34 @@ class Trainer(object):
         self.lrDecayEvery = lrDecayEvery
         self.best_mean_iu = 0    
                    
+    def cross_entropy2d(self, input, target, weight=None, size_average=True):
+        # input: (n, c, h, w), target: (n, h, w)
+        n, c, h, w = input.size()
+        # log_p: (n, c, h, w)
+        log_p = F.log_softmax(input)
+        # log_p: (n*h*w, c)
+        log_p = log_p.transpose(1, 2).transpose(2, 3).contiguous().view(-1, c)
+        log_p = log_p[target.view(n, h, w, 1).repeat(1, 1, 1, c) >= 0] # 这一步的结果可能是空！！
+        if log_p.dim()==0: # 有待记录，查明原因和处理方式， todo
+            loss = torch.FloatTensor(1).zero_()
+            loss = torch.autograd.variable.Variable(loss)
+            self.log_csv_debug('warning: log_p>=0 is empty, image: %s' % self.name)
+            return loss
+        
+        log_p = log_p.view(-1, c)
+        # target: (n*h*w,)
+        mask = target >= 0
+        target = target[mask]
+        loss = F.nll_loss(log_p, target, weight=weight, size_average=False)
+        if size_average:
+            loss /= mask.data.sum()
+        return loss
     
     def optimize(self, data, target):
         self.optim.zero_grad()
         score = self.model(data)
         
-        loss = cross_entropy2d(score, target, size_average=self.size_average) # todo average or not?
+        loss = self.cross_entropy2d(score, target, size_average=self.size_average) # todo average or not?
         loss /= len(target) 
         if np.isnan(float(loss.data[0])):
             raise ValueError('loss is nan while training')
@@ -131,16 +136,24 @@ class Trainer(object):
                     metrics.tolist() + [''] * 5 + [elapsed_time]
                 log = map(str, log)
                 f.write(','.join(log) + '\n')
-    
+                
+    def log_csv_debug(self, info):
+        # logging
+        with open(osp.join(self.out, 'log.csv'), 'a') as f:
+            log = [self.epoch, self.iter] + [info]
+            log = map(str, log)
+            f.write(','.join(log) + '\n')
+                
     def train_epoch(self, log_step):
         self.model.train(True)  # Set model to training mode if btrain==True; else to evaluate mode
         data_loader = self.train_loader
         n_class = len(data_loader.dataset.class_names)
         
-        for batch_idx, (data, target) in tqdm.tqdm(
+        for batch_idx, (data, target, name) in tqdm.tqdm(
                 enumerate(data_loader), total=len(data_loader),
                 desc='Train epoch=%d' % self.epoch, ncols=80, leave=False):
            
+            self.name = name
             # for resuming
             iter = batch_idx + self.epoch * len(data_loader)
             if self.iter != 0 and (iter - 1) != self.iter:
@@ -175,7 +188,7 @@ class Trainer(object):
         visualizations = []
         label_trues, label_preds = [], []
         
-        for batch_idx, (data, target) in tqdm.tqdm(
+        for batch_idx, (data, target, name) in tqdm.tqdm(
                 enumerate(data_loader), total=len(data_loader),
                 desc='Valid iteration=%d' % self.iteration, ncols=80, leave=False):        
 
@@ -186,7 +199,7 @@ class Trainer(object):
             
             score = self.model(data)
 
-            loss = cross_entropy2d(score, target, size_average=self.size_average)
+            loss = self.cross_entropy2d(score, target, size_average=self.size_average)
             if np.isnan(float(loss.data[0])):
                 raise ValueError('loss is nan while validating')
             val_loss += float(loss.data[0]) / len(data)
