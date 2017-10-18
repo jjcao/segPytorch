@@ -61,7 +61,7 @@ class VocDatasetBase(Dataset):
             transform (callable): transform to be applied on a sample.
         """
         self.root = root
-        dataset_dir = osp.join(self.root, 'VOC/VOCdevkit/VOC2012')
+        self.dataset_dir = osp.join(self.root, 'VOC/VOCdevkit/VOC2012')
         
         self.split = split       
         self.transform = transform
@@ -69,20 +69,23 @@ class VocDatasetBase(Dataset):
         
         #for split in ['train', 'val', 'trainval']:
         imset_file = osp.join(
-            dataset_dir, 'ImageSets/Segmentation/%s.txt' % split)
+            self.dataset_dir, 'ImageSets/Segmentation/%s.txt' % split)
+        self.parse_imset(imset_file)
+    
+    def parse_imset(self, imset_file):
         for did in open(imset_file):
             did = did.strip()
             # input image
-            im_file = osp.join(dataset_dir, 'JPEGImages/%s.jpg' % did)
+            im_file = osp.join(self.dataset_dir, 'JPEGImages/%s.jpg' % did)
             # label file, i.e. groundth file
             lbl_file = osp.join(
-                dataset_dir, 'SegmentationClassAug/%s.png' % did)
-            self.files[split].append({
+                self.dataset_dir, 'SegmentationClassAug/%s.png' % did)
+            self.files[self.split].append({
                 'im': im_file,
                 'lbl': lbl_file,
                 'name': did,
             })
-
+    
     def __len__(self):
         return len(self.files[self.split])
 
@@ -127,22 +130,17 @@ class VocDatasetBase(Dataset):
 
 class VOC2011ClassSeg(VocDatasetBase):
     def __init__(self, root, transform, split='seg11valid'):
-        super(VOC2011ClassSeg, self).__init__(
-            root, split=split, transform=transform)
-        dataset_dir = osp.join(self.root, 'VOC/VOCdevkit/VOC2012')
+        self.root = root
+        self.dataset_dir = osp.join(self.root, 'VOC/VOCdevkit/VOC2012')
+        
+        self.split = split       
+        self.transform = transform
+        self.files = collections.defaultdict(list)
+        
         pkg_root = osp.join(osp.dirname(osp.realpath(__file__)), '..')
-        imgsets_file = osp.join(
-            pkg_root, 'ext/fcn.berkeleyvision.org',
-            'data/pascal/seg11valid.txt')
-        for did in open(imgsets_file):
-            did = did.strip()
-            im_file = osp.join(dataset_dir, 'JPEGImages/%s.jpg' % did)
-            lbl_file = osp.join(dataset_dir, 'SegmentationClass/%s.png' % did)
-            self.files[split].append({
-                    'im': im_file, 
-                    'lbl': lbl_file,
-                    'name': did,
-                    })
+        imset_file = osp.join(
+            pkg_root, 'ext/fcn.berkeleyvision.org', 'data/pascal/seg11valid.txt')
+        self.parse_imset(imset_file)
 
 class VOC2012ClassSeg(VocDatasetBase):
     """pascal VOC2012 dataset."""
@@ -158,22 +156,22 @@ class SBDClassSeg(VocDatasetBase):
     
     def __init__(self, root, split='train', transform=False):
         self.root = root
-        dataset_dir = osp.join(self.root, 'VOC/benchmark_RELEASE/dataset')
+        self.dataset_dir = osp.join(self.root, 'VOC/benchmark_RELEASE/dataset')
         self.split = split
         self.transform = transform
         
         self.files = collections.defaultdict(list)
-        for split in ['train', 'val']:
-            imsets_file = osp.join(dataset_dir, '%s.txt' % split)
-            for did in open(imsets_file):
-                did = did.strip()
-                im_file = osp.join(dataset_dir, 'img/%s.jpg' % did)
-                lbl_file = osp.join(dataset_dir, 'cls/%s.mat' % did)
-                self.files[split].append({
-                    'im': im_file,
-                    'lbl': lbl_file,
-                    'name': did,
-                })
+        #for split in ['train', 'val']:
+        imset_file = osp.join(self.dataset_dir, '%s.txt' % split)
+        for did in open(imset_file):
+            did = did.strip()
+            im_file = osp.join(self.dataset_dir, 'img/%s.jpg' % did)
+            lbl_file = osp.join(self.dataset_dir, 'cls/%s.mat' % did)
+            self.files[split].append({
+                'im': im_file,
+                'lbl': lbl_file,
+                'name': did,
+            })
 
     def __getitem__(self, index):
         data_file = self.files[self.split][index]

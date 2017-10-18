@@ -81,8 +81,8 @@ class SpsDatasetBase(Dataset):
         im = np.array(im, dtype=np.uint8)
         lbl = PIL.Image.open(data_file['lbl'])
         lbl = np.array(lbl, dtype=np.int32)
-        lbl[lbl == 0] = -1
-        lbl[lbl == 1] = 0
+        #lbl[lbl == 0] = -1
+        #lbl[lbl == 1] = 0
          
         if self.transform:
             return (*(self.transform(im, lbl)), data_file['name'])
