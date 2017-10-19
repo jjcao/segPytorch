@@ -34,11 +34,13 @@ class TrainerHed(Trainer):
         loss += tmp
 
         loss /= len(target) 
+        
         if np.isnan(float(loss.data[0])):
-            raise ValueError('loss is nan while training')
-                       
-        loss.backward()
-        self.optim.step()
+            #raise ValueError('loss is nan while training')
+            self.log_csv_debug('warning: loss is nan, may caused by log_p>=0 is empty, by wrong groundtruth image: %s' % self.name)
+        else:               
+            loss.backward()
+            self.optim.step()
      
         return fuse_score, loss
 
