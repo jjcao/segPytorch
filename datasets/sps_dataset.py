@@ -98,6 +98,8 @@ class SpsDatasetBase(Dataset):
         im = im[:, :, ::-1]
         lbl = lbl.numpy()
         return im, lbl
+    def get_labels_color(self):
+        return np.asarray([[0,0,0], [255,255,255]])
     
 class Sc2ClassSeg(SpsDatasetBase):
     def __init__(self, root, split='sc2_train', transform=False):

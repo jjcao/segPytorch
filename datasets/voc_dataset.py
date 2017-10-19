@@ -113,20 +113,11 @@ class VocDatasetBase(Dataset):
         lbl = lbl.numpy()
         return im, lbl
     
-#    def __iter__(self):
-#        self.n = 0
-#        self.max = self.__len__()
-#        
-#        return self
-#    
-#    def __next__(self):
-#        if self.n <= self.max:
-#            im, lbl = self.__getitem__(self.n)
-#            self.n += 1
-#        else:
-#            raise StopIteration
-#            
-#        return im, lbl
+    def get_labels_color(self):
+        return np.asarray([[0,0,0], [128,0,0], [0,128,0], [128,128,0], [0,0,128], [128,0,128],
+                              [0,128,128], [128,128,128], [64,0,0], [192,0,0], [64,128,0], [192,128,0],
+                              [64,0,128], [192,0,128], [64,128,128], [192,128,128], [0, 64,0], [128, 64, 0],
+                              [0,192,0], [128,192,0], [0,64,128]])
 
 class VOC2011ClassSeg(VocDatasetBase):
     def __init__(self, root, transform, split='seg11valid'):

@@ -16,20 +16,20 @@ import os.path as osp
 
 import numpy as np
 import skimage.io
+import scipy.misc as misc
 import torch
 from torch.autograd import Variable
 import tqdm
 
-from datasets import get_dataset
+from datasets.test_dataset import TestDataset
 from datasets import transforms
-from utils import utils
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--model', help='Model path', default='../../output/fcn32s_model_best.pth.tar')
-    parser.add_argument('-d', '--data', help='root path of dataset', type=str, default='../../data/')#/Users/jjcao/Documents/data/
+    parser.add_argument('-m', '--model', help='Model path', default='../../output/fcn32s_model_best_nclass_21.pth.tar')
+    parser.add_argument('-i', '--input', help='path of images', type=str, default='../../input/')#/Users/jjcao/Documents/data/    
+    parser.add_argument('-o', '--output', help='output path', type=str, default='../../output')  
     parser.add_argument('-g', '--gpu', help='-1 for cpu', type=int, default=-1)
-    parser.add_argument('-s', '--split', help='Split of dataset to validate on', type=str, default='VOC2011')     
     args = parser.parse_args()
 
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)  
@@ -39,35 +39,41 @@ def main():
     ############################## 
     ### data
     ############################## 
-    ValDataset = get_dataset(args.split)
+    # sometimes, we need set mean_bgr
+    bname = osp.basename(model_file)
+    bname = osp.splitext(bname)[0]
+    bname = osp.splitext(bname)[0]
+    id = bname.index('nclass') 
+    id1 = bname.index('_', id)
+    n_class = int(bname[id1+1:len(bname)])
+    
     data_transform = transforms.Compose(
-                [transforms.Normalize(ValDataset.mean_bgr), 
+                [transforms.Normalize(TestDataset.mean_bgr), 
                 transforms.ToTensor() ]) # used by FCN   
     
     
-    dataset = ValDataset(root=args.data, transform=data_transform)
-    kwargs = {'num_workers': 4, 'pin_memory': True} if cuda else {'num_workers': 4}
+    dataset = TestDataset(args.input, data_transform, n_class)
+    kwargs = {'num_workers': 1, 'pin_memory': True} if cuda else {'num_workers': 1}
     val_loader = torch.utils.data.DataLoader(dataset, batch_size=1,
                                              shuffle=False, **kwargs)    
-
-    n_class = len(val_loader.dataset.class_names)
-  
+    im, lbl, name = dataset[0]
+    print(im.shape, lbl.shape, name)
         
     ############################## 
     ### model
     ############################## 
-    if osp.basename(model_file).startswith('fcn32s'):
+    if bname.startswith('fcn32s'):
         model_type = 'fcn32s'
-    elif osp.basename(model_file).startswith('fcn16s'):
+    elif bname.startswith('fcn16s'):
         model_type = 'fcn16s'
-    elif osp.basename(model_file).startswith('fcn8s'):
-        if osp.basename(model_file).startswith('fcn8s-atonce'):
+    elif bname.startswith('fcn8s'):
+        if bname.startswith('fcn8s-atonce'):
             model_type = 'fcn8s-atonce'
         else:
             model_type = 'fcn8s'
     else:
         raise ValueError
-        
+    
     from models import get_model    
     if cuda:
         checkpoint = torch.load(model_file) 
@@ -89,42 +95,24 @@ def main():
     ############################## 
     ### Evaluating
     ############################## 
-    print('==> Evaluating with VOC2011ClassSeg seg11valid')
-    visualizations = []
-    label_trues, label_preds = [], []
-    for batch_idx, (data, target, name) in tqdm.tqdm(enumerate(val_loader),
+    print('==> testing')
+    for batch_idx, (data, target, names) in tqdm.tqdm(enumerate(val_loader),
                                                total=len(val_loader),
                                                ncols=80, leave=False):
         if cuda:
             data, target = data.cuda(), target.cuda()
         data, target = Variable(data, volatile=True), Variable(target)
-        score = model(data)
-
-        imgs = data.data.cpu()
-        lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
-        lbl_true = target.data.cpu()
-        for img, lt, lp in zip(imgs, lbl_true, lbl_pred):
-            img, lt = val_loader.dataset.untransform(img, lt)
-            label_trues.append(lt)
-            label_preds.append(lp)
-            if len(visualizations) < 9:
-                #import pdb; pdb.set_trace()
-                viz = utils.visualize_segmentation(
-                    lbl_pred=lp, lbl_true=lt, img=img, n_class=n_class)#,
-                    #label_names=val_loader.dataset.class_names)
-                visualizations.append(viz)
-    metrics = utils.label_accuracy_score(label_trues, label_preds, n_class=n_class)
-    metrics = np.array(metrics)
-    metrics *= 100
-    print('''\
-Accuracy: {0}
-Accuracy Class: {1}
-Mean IU: {2}
-FWAV Accuracy: {3}'''.format(*metrics))
-
-    viz = utils.get_tile_image(visualizations)
-    skimage.io.imsave('viz_evaluate.png', viz)
-
+        scores = model(data)#outputs = model(images)
+                
+        preds = scores.data.max(1)[1].cpu().numpy()[:, :, :]#pred = np.squeeze(outputs.data.max(1)[1].cpu().numpy(), axis=1)
+            
+        for name, pred in zip(names,preds):
+            decoded = dataset.decode_segmap(pred)
+            print(np.unique(pred))
+            output = osp.join(args.output, '%s.png'%name)
+            misc.imsave(output, decoded)
+            #skimage.io.imsave(output, decoded)
+            print("Segmentation Mask Saved at: {}".format(args.output))
 
 if __name__ == '__main__':
     main()

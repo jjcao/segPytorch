@@ -7,8 +7,8 @@ Created on Wed Aug 16 08:10:32 2017
 """
 import pdb; pdb.set_trace()
 import matplotlib.pyplot as plt
-import torch
-from transforms import UnNormalize, FromTensor
+#import torch
+#from transforms import UnNormalize, FromTensor
 from visualizer import show_im_label, show_im_label_batch
 from sps_dataset import Sc2ClassSeg
    
