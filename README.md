@@ -48,12 +48,6 @@ conda install pytorch torchvision cuda80 -c soumith
 
 ### Usage
 
-Launch [visdom](https://github.com/facebookresearch/visdom#launch) by running (in a separate terminal window)
-
-```
-python -m visdom.server
-```
-
 **To train the model :**
 
 ```
