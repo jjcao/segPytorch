@@ -70,7 +70,7 @@ python validate.py -m MODEL_PATH [-d DATASET_PATH] [-s SPLIT] [-g 1]
 **To test the model w.r.t. a dataset on custom images(s):**
 
 ```
-python test.py -m MODEL_PATH -i IMG_PATH -o OUT_PATH
+python test.py -m MODEL_PATH -i IMG_PATH [-o OUT_PATH]
 ```
 
 # Reference code
