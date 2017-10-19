@@ -169,8 +169,8 @@ class FCN16s(FCN):
         super(FCN16s, self).__init__(n_classes, learned_billinear)
         self.score_pool4 = nn.Conv2d(512, self.n_classes, 1)
         if self.learned_billinear:                    
-            self.upscore2 = nn.ConvTranspose2d(self.n_class, self.n_class, 4, stride=2, bias=False)
-            self.upscore16 = nn.ConvTranspose2d(self.n_class, self.n_class, 32, stride=16, bias=False)
+            self.upscore2 = nn.ConvTranspose2d(self.n_classes, self.n_classes, 4, stride=2, bias=False)
+            self.upscore16 = nn.ConvTranspose2d(self.n_classes, self.n_classes, 32, stride=16, bias=False)
         
         self._initialize_weights()
 
@@ -232,9 +232,9 @@ class FCN8s(FCN):
         self.score_pool3 = nn.Conv2d(256, self.n_classes, 1)
         
         if self.learned_billinear: 
-            self.upscore2 = nn.ConvTranspose2d(self.n_class, self.n_class, 4, stride=2, bias=False)
-            self.upscore8 = nn.ConvTranspose2d(self.n_class, self.n_class, 16, stride=8, bias=False)
-            self.upscore_pool4 = nn.ConvTranspose2d(self.n_class, self.n_class, 4, stride=2, bias=False)
+            self.upscore2 = nn.ConvTranspose2d(self.n_classes, self.n_classes, 4, stride=2, bias=False)
+            self.upscore8 = nn.ConvTranspose2d(self.n_classes, self.n_classes, 16, stride=8, bias=False)
+            self.upscore_pool4 = nn.ConvTranspose2d(self.n_classes, self.n_classes, 4, stride=2, bias=False)
             
         self._initialize_weights()
 
