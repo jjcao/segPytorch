@@ -36,7 +36,10 @@ def get_model(name, n_classes, checkpoint, args):
     start_iteration = 0
     
     if name in model_dict.keys():
-        model = model(n_classes=n_classes) 
+        if name in ['fcn32s','fcn16s', 'fcn8s']:
+            model = model(n_classes=n_classes, learned_billinear=True) 
+        else:
+            model = model(n_classes=n_classes)
         
         if checkpoint:
 #            if torch.cuda.is_available():
