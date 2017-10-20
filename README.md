@@ -14,10 +14,10 @@ Pspnet, not tested
 | Model | Implementation |   epoch |   iteration | Accuracy | Accuracy Class | Mean IU | FWAV Accuracy |
 |:-----:|:--------------:|:-------:|:-----------:|:--------:|:--------------:|:-------:|:-------------:|
 |FCN32s      | [Original](https://github.com/shelhamer/fcn.berkeleyvision.org/tree/master/voc-fcn32s)       | - | -     | 90.49 | 76.48 | 63.63 | 83.47 |
-|FCN32s| Ours|8 | 68000 | 90.31 | 72.36 | 62.37 | 82.83 |
+|FCN32s| Ours|11 | 95000 | 89.59| 75.11 | 62.56 | 81.93 |
+|FCN32s| Ours|19 | 168000 | 89.82 | 74.08 | 62.81 | 82.17 |
 |FCN16s      | [Original](https://github.com/shelhamer/fcn.berkeleyvision.org/tree/master/voc-fcn16s)       | - | -     | 91.00 | 78.07 | 65.01 | 84.27 |
 |FCN16s| Ours|2 | 18000 | 90.30| 74.46 | 62.72 | 82.95 |
-
 
 # Requirements
 * pytorch >= 0.2.0
