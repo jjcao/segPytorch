@@ -25,8 +25,8 @@ class SpsDatasetBase(Dataset):
         'background',
         'foreground',
     ])
-    mean_bgr=np.array([104.00698793, 116.66876762, 122.67891434])# todo 亚芳，张媛??
-    
+    #mean_bgr=np.array([104.00698793, 116.66876762, 122.67891434])
+    mean_bgr=np.array([111.0952, 116.4255, 123.6963])# from sc2 by 张媛
 
     def __init__(self, root, transform, split='sc2_train'):
         """

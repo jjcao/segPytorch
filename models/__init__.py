@@ -59,7 +59,7 @@ def get_model(name, n_classes, checkpoint, args):
                 vgg16 = Vgg16(pretrained=True)
                 model.init_vgg16_params(vgg16)  
             elif name == 'fcn16s':
-                fcn32s = FCN32s(n_classes=n_classes)
+                fcn32s = FCN32s(n_classes=n_classes, learned_billinear=True)
                 
                 if torch.cuda.is_available():
                     base = torch.load(args['fcn32s_pretrained_model']) 
@@ -70,15 +70,15 @@ def get_model(name, n_classes, checkpoint, args):
                 fcn32s.load_state_dict(base['model_state_dict'])
                 model.init_fcn32s_params(fcn32s)
             elif name == 'fcn8s':
-                fcn16s = FCN16s(n_classes=n_classes)
+                fcn16s = FCN16s(n_classes=n_classes, learned_billinear=True)
                 
                 if torch.cuda.is_available():
-                    base = torch.load(args['fcn32s_pretrained_model']) 
+                    base = torch.load(args['fcn16s_pretrained_model']) 
                 else:
-                    base = torch.load(args['fcn32s_pretrained_model'], 
+                    base = torch.load(args['fcn16s_pretrained_model'], 
                                       map_location=lambda storage, loc: storage)
                 fcn16s.load_state_dict(base['model_state_dict'])    
-                model.copy_params_from_fcn16s(fcn16s)
+                model.init_fcn16s_params(fcn16s)
             else:
                 return model, start_epoch, start_iteration
     else:
