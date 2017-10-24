@@ -17,7 +17,9 @@ Pspnet, not tested
 |FCN32s| Ours|11 | 95000 | 89.59| 75.11 | 62.56 | 81.93 |
 |FCN32s| Ours|19 | 173000 | 89.82 | 74.30 | 62.86 | 82.19 |
 |FCN16s      | [Original](https://github.com/shelhamer/fcn.berkeleyvision.org/tree/master/voc-fcn16s)       | - | -     | 91.00 | 78.07 | 65.01 | 84.27 |
-|FCN16s| Ours|2 | 80000 | ?| ? | 63.27 | ? |
+|FCN16s| Ours|22 | 190000 | 90.05| 77.02| 63.91 | 82.70 |
+|FCN8s       | [Original](https://github.com/shelhamer/fcn.berkeleyvision.org/tree/master/voc-fcn8s)        | - | -     | 91.23 | 77.61 | 65.51 | 84.55 |
+|FCN8s| Ours | 11 | 100000 | 90.25 | 77.55 | 64.63 | 83.02 |
 
 # Requirements
 * pytorch >= 0.2.0
