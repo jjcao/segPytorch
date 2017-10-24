@@ -11,7 +11,7 @@ todo office choice between vgg16 and resnet-101, etc
 
 import torch
 
-from models.fcn import FCN32s, FCN16s, FCN8s
+from models.fcn import FCN32s, FCN16s, FCN8s, FCN32sps
 from models.segnet import Segnet
 from models.unet import Unet
 from models.pspnet import Pspnet
@@ -20,6 +20,7 @@ from models.hed import Hed
 
 model_dict = {
     'fcn32s': FCN32s,
+    'fcn32sps': FCN32sps,
     'fcn8s': FCN8s,
     'fcn16s': FCN16s,
     'unet': Unet,
@@ -50,7 +51,7 @@ def get_model(name, n_classes, checkpoint, args):
             start_iteration = checkpoint['iteration']
         else:  
             #import pdb; pdb.set_trace()
-            if name in ['fcn32s', 'segnet']:
+            if name in ['fcn32s', 'fcn32sps', 'segnet']:
                 # the vgg16 pretrained model (vgg16-397923af.pth) provided by pytorch is far weak than 
                 # vgg16_from_caffe.pth provided by https://github.com/wkentaro/pytorch-fcn
                 #vgg16 = models.vgg16(pretrained=True)
