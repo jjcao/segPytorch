@@ -317,27 +317,26 @@ def make_layers_vgg16sps(cfg, n_classes):
                         nn.ReLU(inplace=True),
                         nn.Dropout2d(),
                         nn.Conv2d(block[1], n_classes, 1),) # score 
-        else:
-            if i == len(cfg)-2: # for conv block 5 
-                layers = nn.ModuleList()
-                for och in block: # och for output_channels
-                    layers += [nn.Conv2d(in_channels, och, kernel_size, padding = padding)]
-                    layers += [nn.ReLU(inplace=True)]
-                    in_channels = och
-                    padding = 1
-                    
-                #layers += [nn.MaxPool2d(2, stride=2, ceil_mode=True)]  
-                conv_blocks.append( nn.Sequential(*layers))             
-            else: # for conv block 1, 2,3,4 
-                layers = nn.ModuleList()
-                for och in block: # och for output_channels
-                    layers += [nn.Conv2d(in_channels, och, kernel_size, padding = padding)]
-                    layers += [nn.ReLU(inplace=True)]
-                    in_channels = och
-                    padding = 1
+        elif i == len(cfg)-2: # for conv block 5 
+            layers = nn.ModuleList()
+            for och in block: # och for output_channels
+                layers += [nn.Conv2d(in_channels, och, kernel_size, padding = padding)]
+                layers += [nn.ReLU(inplace=True)]
+                in_channels = och
+                padding = 1
                 
-                layers += [nn.MaxPool2d(2, stride=2, ceil_mode=True)]  
-                conv_blocks.append( nn.Sequential(*layers))    
+            #layers += [nn.MaxPool2d(2, stride=2, ceil_mode=True)]  
+            conv_blocks.append( nn.Sequential(*layers))             
+        else: # for conv block 1, 2,3,4 
+            layers = nn.ModuleList()
+            for och in block: # och for output_channels
+                layers += [nn.Conv2d(in_channels, och, kernel_size, padding = padding)]
+                layers += [nn.ReLU(inplace=True)]
+                in_channels = och
+                padding = 1
+            
+            layers += [nn.MaxPool2d(2, stride=2, ceil_mode=True)]  
+            conv_blocks.append( nn.Sequential(*layers))    
                 
     return conv_blocks, classifier
            
@@ -372,8 +371,7 @@ class FCN32sps(FCN):
         
     def init_vgg16_params(self, vgg16, copy_fc8=False):    
         #import pdb; pdb.set_trace()
-        #print(len(self.conv_blocks))      
-        #ranges = [[0, 4], [5, 9], [10, 16], [17, 23], [24, 29]]
+        #print(len(self.conv_blocks))  
         ranges = [[0, 4], [5, 9], [10, 16], [17, 23], [24, 29]]
         features = list(vgg16.features.children())
 
@@ -381,7 +379,6 @@ class FCN32sps(FCN):
         #features[0].weight.data - self.conv_block1[0].weight.data
         
         for idx, conv_block in enumerate(self.conv_blocks):
-            print(idx)
             for l1, l2 in zip(features[ranges[idx][0]:ranges[idx][1]], conv_block):
                 if isinstance(l1, nn.Conv2d) and isinstance(l2, nn.Conv2d):
                     #print (idx, l1, l2)                    
